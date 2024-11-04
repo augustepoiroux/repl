@@ -14,14 +14,3 @@ dependencies = [
 [build-system]
 requires      = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.hatch.build]
-include = ["src/repl", "/REPL", "/lake-manifest.json", "/lakefile.toml", "/lean-toolchain", "/REPL.lean"]
-
-[tool.hatch.build.targets.wheel.sources]
-"src"                = ""
-"REPL"               = "repl/REPL"
-"lake-manifest.json" = "repl/lake-manifest.json"
-"lakefile.toml"      = "repl/lakefile.toml"
-"lean-toolchain"     = "repl/lean-toolchain"
-"REPL.lean"          = "repl/REPL.lean"

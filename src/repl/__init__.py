@@ -4,8 +4,8 @@ from rich.console import Console
 
 __console = Console()
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-REPL_DIR = ROOT_DIR
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPL_DIR = os.path.join(ROOT_DIR, "lean")
 
 
 def build_repl():
