@@ -52,7 +52,7 @@ class LeanServer:
             self.proc.expect_exact("\r\n")
             _ = self.proc.expect_exact("\r\n\r\n", timeout=timeout)
         except Exception as e:
-            raise Exception(f"Uncaught exception: {e}")
+            raise e
 
         # clean up the output
         output = self.proc.before
@@ -93,6 +93,7 @@ class LeanServer:
         Args:
             code: The Lean code to run.
             env: The environment to use.
+            save_env: Whether to save the code as a new environment in the Lean server after running it.
             verbose: Whether to print additional information during the verification process.
             timeout: The timeout for the request.
             auto_env_cache: Whether to automatically try to use previously cached environments when possible. Used for performance optimization purposes and only if `env` parameter is `None`.
@@ -130,7 +131,7 @@ class RobustLeanServer(LeanServer):
         self.env_counter = 0
         self.env_cache = {}
 
-    def _cache_to_lean_env(self, env: int | None):
+    def _cache_to_lean_env(self, env: int | None) -> int | None:
         if env is None:
             return None
         if env >= 0:
@@ -143,7 +144,7 @@ class RobustLeanServer(LeanServer):
         # re-cache all the environments
         for env_id, env_data in self.env_cache.items():
             self.env_cache[env_id]["repl_env"] = self.run_code(
-                env_data["code"], env=self._cache_to_lean_env(env_data["depends_on"])
+                env_data["code"], env=self._cache_to_lean_env(env_data["depends_on"]), save_env=True
             )["env"]
 
     def get_env_cache(self, code: str, env: int | None = None) -> int:
@@ -163,7 +164,7 @@ class RobustLeanServer(LeanServer):
 
         # otherwise, add the code to the cache
         self.env_counter -= 1
-        res = self.run_code(code, env=self._cache_to_lean_env(env), auto_env_cache=True)
+        res = self.run_code(code, env=self._cache_to_lean_env(env), save_env=True, auto_env_cache=True)
         self.env_cache[self.env_counter] = {"code": code, "repl_env": res["env"], "depends_on": env}
         return self.env_counter
 
