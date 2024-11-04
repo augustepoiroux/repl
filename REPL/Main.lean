@@ -98,17 +98,17 @@ def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorr
   trees.flatMap InfoTree.sorries |>.filter (fun t => match t.2.1 with
     | .term _ none => false
     | _ => true ) |>.mapM
-      fun ⟨ctx, g, pos, endPos⟩ => do
-        let (goal, proofState) ← match g with
-        | .tactic g => do
-           let s ← ProofSnapshot.create ctx none env? [g]
-           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
-        | .term lctx (some t) => do
-           let s ← ProofSnapshot.create ctx lctx env? [] [t]
-           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
-        | .term _ none => unreachable!
-        let proofStateId ← proofState.mapM recordProofSnapshot
-        return Sorry.of goal pos endPos proofStateId
+    fun ⟨ctx, g, pos, endPos⟩ => do
+      let (goal, proofState) ← match g with
+      | .tactic g => do
+         let s ← ProofSnapshot.create ctx none env? [g]
+         pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+      | .term lctx (some t) => do
+         let s ← ProofSnapshot.create ctx lctx env? [] [t]
+         pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+      | .term _ none => unreachable!
+      let proofStateId ← proofState.mapM recordProofSnapshot
+      return Sorry.of goal pos endPos proofStateId
 
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
@@ -184,6 +184,81 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
   Sum.inl <$> createProofStepReponse proofState
 
+/-- Extract syntax starting and ending positions. -/
+def getElabPosRange (ctx : ContextInfo) (stx : Syntax) : (Position × Position) :=
+  let pos    := stx.getPos?.getD 0
+  let endPos := stx.getTailPos?.getD pos
+  (ctx.fileMap.toPosition pos, ctx.fileMap.toPosition endPos)
+
+/-- Extract command details, cmd kind and identifier, from an `ElabInfo`. -/
+def getAtomicCommandDetails (info : ElabInfo): Option (String × String) := do
+  -- TODO: Check that all these cases are handled correctly
+  match info.elaborator with
+  | Name.str _ s => match s with
+    | "elabVariable" => ("variable", "")
+    | "expandNotation" => ("notation", "")
+    | "elabSection" => ("section", "")
+    | "elabOpen" => ("open", "")
+    | "expandMixfix" => ("mixfix", "")
+    | "elabNonComputableSection" => ("noncomputable", "")
+    | "elabNamespace"
+    | "elabEnd"
+    | "expandLemma"
+    | "expandNamespacedDeclaration"
+    | "elabDeclaration" =>
+      let mut cmdKind := ""
+      let mut cmdIdentifier := ""
+      -- This is a hack to get the kind and the identifier of the declaration
+      for stx in info.stx.topDown (firstChoiceOnly := true) do
+        match stx with
+        | Syntax.atom _ val           =>
+          if cmdKind == "" then
+            let allLower := val.all fun c => c.isLower
+            if allLower then -- commands are strictly composed of lowercase alphabet characters
+              cmdKind := val
+              if cmdKind == "example" then -- examples are anonymous
+                break
+        | Syntax.ident _ rawVal _ _   =>
+          if cmdIdentifier == "" ∧ cmdKind != "" then
+            cmdIdentifier := rawVal.toString
+            break
+        | _ => ()
+      (cmdKind, cmdIdentifier)
+    | _ => ("BUG_UNHANDLED_CASE", s)
+  | _ => none
+
+partial def extractIdentifiers (stx : Syntax) : List String :=
+  match stx with
+  | Syntax.node _ _ args => args.toList.flatMap extractIdentifiers
+  | Syntax.ident _ rawVal _ _ => [rawVal.toString]
+  | _ => []
+
+partial def extractAtomicCommand (tree : InfoTree) (ctx? : Option ContextInfo := none) : Option AtomicCommand := do
+  match tree with
+  | InfoTree.hole _     => none
+  | InfoTree.context i t => extractAtomicCommand t <| i.mergeIntoOuter? ctx?
+  | InfoTree.node i _   => match ctx? with
+    | none => none
+    | some ctx =>
+      match i with
+      | Info.ofCommandInfo i => do
+        let info := i.toElabInfo
+        let (pos, endPos) := getElabPosRange ctx info.stx
+        if info.elaborator.isAnonymous || pos == endPos then
+          none
+        else
+          match getAtomicCommandDetails info with
+          | some (cmdKind, cmdIdentifier) =>
+            return {
+              kind := cmdKind,
+              identifier := cmdIdentifier,
+              pos := { line := pos.line, column := pos.column },
+              endPos := { line := endPos.line, column := endPos.column }
+              identifiers := (extractIdentifiers info.stx).eraseDups -- TODO: improve, we want dependencies in a robust way
+            }
+          | _ => none
+      | _ => none
+
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
@@ -203,19 +278,34 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let messages ← messages.mapM fun m => Message.of m
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees (initialCmdState?.map (·.env))
+  let atomicCommands := trees.flatMap fun t => match extractAtomicCommand t with
+    | some cmd => [cmd]
+    | none => []
+
+  let sorries ← match s.returnSorries with
+  | some true =>
+    sorries trees (initialCmdState?.map (·.env))
+  | _ => pure []
+
   let tactics ← match s.allTactics with
   | some true => tactics trees
   | _ => pure []
-  let cmdSnapshot :=
-  { cmdState
-    cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
-      { fileName := "",
-        fileMap := default,
-        tacticCache? := none,
-        snap? := none,
-        cancelTk? := none } }
-  let env ← recordCommandSnapshot cmdSnapshot
+
+  -- save the command snapshot if requested
+  let env ← match s.saveEnv with
+  | some true => do
+      let cmdSnapshot :=
+      { cmdState
+        cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
+          { fileName := "",
+            fileMap := default,
+            tacticCache? := none,
+            snap? := none,
+            cancelTk? := none } }
+      let a ← recordCommandSnapshot cmdSnapshot
+      pure (some a)
+  | _ => pure none
+
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
@@ -230,13 +320,14 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     { env,
       messages,
       sorries,
-      tactics
+      tactics,
+      atomicCommands,
       infotree }
 
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
   try
     let cmd ← IO.FS.readFile s.path
-    runCommand { s with env := none, cmd }
+    runCommand { s with env := none, cmd, saveEnv := s.saveEnv }
   catch e =>
     pure <| .inr ⟨e.toString⟩
 

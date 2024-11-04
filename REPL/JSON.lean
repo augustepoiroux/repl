@@ -18,6 +18,8 @@ structure CommandOptions where
   Anything else is ignored.
   -/
   infotree : Option String
+  saveEnv : Option Bool := none
+  returnSorries : Option Bool := none
 
 /-- Run Lean commands.
 If `env = none`, starts a new session (in which you can use `import`).
@@ -115,15 +117,33 @@ def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState :
     proofState,
     usedConstants }
 
+structure AtomicCommand where
+  kind : String
+  identifier : Option String
+  pos : Pos
+  endPos : Pos
+  identifiers : List String
+deriving ToJson, FromJson
+
+instance : ToJson AtomicCommand where
+  toJson r := Json.mkObj <| .flatten [
+    [("kind", r.kind)],
+    [("identifier", toJson r.identifier)],
+    [("pos", toJson r.pos)],
+    [("endPos", toJson r.endPos)],
+    [("identifiers", toJson r.identifiers)]
+  ]
+
 /--
 A response to a Lean command.
 `env` can be used in later calls, to build on the stored environment.
 -/
 structure CommandResponse where
-  env : Nat
+  env : Option Nat
   messages : List Message := []
   sorries : List Sorry := []
   tactics : List Tactic := []
+  atomicCommands : List AtomicCommand := []
   infotree : Option Json := none
 deriving FromJson
 
@@ -133,10 +153,11 @@ def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Jso
 
 instance : ToJson CommandResponse where
   toJson r := Json.mkObj <| .flatten [
-    [("env", r.env)],
+    match r.env with | some n => [("env", n)] | none => [],
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "tactics" r.tactics,
+    Json.nonemptyList "atomicCommands" r.atomicCommands,
     match r.infotree with | some j => [("infotree", j)] | none => []
   ]
 
