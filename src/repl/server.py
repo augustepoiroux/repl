@@ -11,14 +11,21 @@ from repl import REPL_DIR, __console
 
 
 class LeanServer:
-    # Inspired from: https://github.com/zhangir-azerbayev/repl/blob/bddf452deda0df2240b248e651bcc37fb8e59d01/pylean/pylean/__init__.py
+    """
+    A Lean server that communicates with the Lean REPL using JSON messages.
+
+    Inspired from:
+    - https://github.com/utensil/lean4_jupyter/blob/c7aac9002011202a7341865255ad382e11ee625a/lean4_jupyter/repl.py
+    - https://github.com/zhangir-azerbayev/repl/blob/bddf452deda0df2240b248e651bcc37fb8e59d01/pylean/pylean/__init__.py
+    """
+
     def __init__(self):
         self.proc = None
         self.start()
 
     def start(self):
         os.chdir(REPL_DIR)
-        self.proc = pexpect.spawn("lake exe repl", cwd=REPL_DIR, encoding="utf-8")
+        self.proc = pexpect.spawn("lake env repl", cwd=REPL_DIR, encoding="utf-8", codec_errors="replace")
         self.env_cache = {}
 
     def kill(self):
@@ -38,12 +45,11 @@ class LeanServer:
         if verbose:
             __console.print(json_query)
 
-        self.proc.sendline(json_query)
-        self.proc.expect_exact(json_query + "\r\n")
-        self.proc.sendline()
-        self.proc.expect_exact("\r\n")
-
         try:
+            self.proc.sendline(json_query)
+            self.proc.expect_exact(json_query + "\r\n")
+            self.proc.sendline()
+            self.proc.expect_exact("\r\n")
             _ = self.proc.expect_exact("\r\n\r\n", timeout=timeout)
         except Exception as e:
             raise Exception(f"Uncaught exception: {e}")
