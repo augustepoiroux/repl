@@ -5,3 +5,7 @@
 /test/Mathlib/.lake
 /test/*.olean
 /test/*.olean.tmp
+
+# Python
+.venv
+__pycache__
