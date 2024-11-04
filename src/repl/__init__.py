@@ -9,10 +9,7 @@ REPL_DIR = ROOT_DIR
 
 
 def build_repl():
-    os.chdir(REPL_DIR)
-    os.system("rm -rf .lake")
-    os.system("lake exe cache get")
-    os.system("lake build")
+    os.system(f"cd {REPL_DIR} && rm -rf .lake && lake exe cache get && lake build")
 
 
 # check if lake is installed
