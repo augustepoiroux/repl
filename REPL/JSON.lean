@@ -19,7 +19,6 @@ structure CommandOptions where
   -/
   infotree : Option String
   saveEnv : Option Bool := none
-  returnSorries : Option Bool := none
 
 /-- Run Lean commands.
 If `env = none`, starts a new session (in which you can use `import`).

@@ -282,10 +282,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     | some cmd => [cmd]
     | none => []
 
-  let sorries ← match s.returnSorries with
-  | some true =>
-    sorries trees (initialCmdState?.map (·.env))
-  | _ => pure []
+  let sorries ← sorries trees (initialCmdState?.map (·.env))
 
   let tactics ← match s.allTactics with
   | some true => tactics trees
