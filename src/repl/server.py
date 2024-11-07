@@ -7,7 +7,7 @@ from time import sleep
 import pexpect
 import psutil
 
-from repl import REPL_DIR, __console
+from repl import REPL_4_11_DIR, REPL_DIR, __console
 
 
 class LeanServer:
@@ -19,13 +19,22 @@ class LeanServer:
     - https://github.com/zhangir-azerbayev/repl/blob/bddf452deda0df2240b248e651bcc37fb8e59d01/pylean/pylean/__init__.py
     """
 
-    def __init__(self):
+    def __init__(self, version: str | None = None):
+        """
+        Args:
+            version: The version of Lean to use. If `None`, the latest version will be used.
+                Possible values: "4.11.0-rc1", None (which corresponds to v4.14.0-rc1)
+        """
         self.proc = None
+        self.version = version
         self.start()
 
     def start(self):
-        os.chdir(REPL_DIR)
-        self.proc = pexpect.spawn("lake env repl", cwd=REPL_DIR, encoding="utf-8", codec_errors="replace")
+        repl_dir = REPL_DIR
+        if self.version == "4.11.0-rc1":
+            repl_dir = REPL_4_11_DIR
+        os.chdir(repl_dir)
+        self.proc = pexpect.spawn("lake env repl", cwd=repl_dir, encoding="utf-8", codec_errors="replace")
         self.env_cache = {}
 
     def kill(self):
@@ -126,8 +135,8 @@ class RobustLeanServer(LeanServer):
     Cached environments indexes are negative integers starting from -1 to not conflict with the positive integers used by the Lean server.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, version: str | None = None):
+        super().__init__(version)
         self.env_counter = 0
         self.env_cache = {}
 

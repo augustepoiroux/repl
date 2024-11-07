@@ -6,10 +6,12 @@ __console = Console()
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPL_DIR = os.path.join(ROOT_DIR, "lean")
+REPL_4_11_DIR = os.path.join(ROOT_DIR, "lean_v4.11.0-rc1")
 
 
 def build_repl():
     os.system(f"cd {REPL_DIR} && rm -rf .lake && lake exe cache get && lake build")
+    os.system(f"cd {REPL_4_11_DIR} && rm -rf .lake && lake exe cache get && lake build")
 
 
 # check if lake is installed
@@ -18,6 +20,6 @@ if os.system("which lake") != 0:
     exit(1)
 
 # Check if we need to build the REPL, and if so, build it
-if not os.path.exists(os.path.join(REPL_DIR, ".lake")):
+if not os.path.exists(os.path.join(REPL_DIR, ".lake")) or not os.path.exists(os.path.join(REPL_4_11_DIR, ".lake")):
     __console.log("Lean REPL not ready. Building it... (this may take a while)")
     build_repl()
