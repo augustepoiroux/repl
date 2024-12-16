@@ -131,9 +131,9 @@ partial def filter (p : Info → Bool) (m : MVarId → Bool := fun _ => false) :
   | .context ctx tree => tree.filter p m |>.map (.context ctx)
   | .node info children =>
     if p info then
-      [.node info (children.toList.map (filter p m)).flatten.toPArray']
+      [.node info (children.toList.map (filter p m)).join.toPArray']
     else
-      (children.toList.map (filter p m)).flatten
+      (children.toList.map (filter p m)).join
   | .hole mvar => if m mvar then [.hole mvar] else []
 
 /-- Discard all nodes besides `.context` nodes and `TacticInfo` nodes. -/
@@ -156,7 +156,7 @@ partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info →
   | context ctx t => t.findAllInfo (ctx.mergeIntoOuter? ctx?) p
   | node i ts  =>
     let info := if p i then [(i, ctx?)] else []
-    let rest := ts.toList.flatMap (fun t => t.findAllInfo ctx? p)
+    let rest := ts.toList.bind (fun t => t.findAllInfo ctx? p)
     info ++ rest
   | _ => []
 
@@ -214,13 +214,13 @@ def sorries (t : InfoTree) : List (ContextInfo × SorryType × Position × Posit
 
 def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × Position × Position × Array Name) :=
     -- HACK: creating a child ngen
-  t.findTacticNodes.map fun ⟨i, ctx⟩ => 
-    let range := stxRange ctx.fileMap i.stx 
-    ( { ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, 
-      i.stx, 
-      i.goalsBefore, 
-      range.fst, 
-      range.snd, 
+  t.findTacticNodes.map fun ⟨i, ctx⟩ =>
+    let range := stxRange ctx.fileMap i.stx
+    ( { ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 },
+      i.stx,
+      i.goalsBefore,
+      range.fst,
+      range.snd,
       i.getUsedConstantsAsSet.toArray )
 
 
