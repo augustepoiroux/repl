@@ -158,7 +158,7 @@ index 6ff9631..0e662ff 100644
  git = "https://github.com/leanprover-community/mathlib4"
 -rev = "v4.14.0"
 +rev = "v4.14.0-rc1"
- 
+
  [[lean_lib]]
  name = "ReplMathlibTests"
 diff --git a/test/Mathlib/lean-toolchain b/test/Mathlib/lean-toolchain
@@ -169,15 +169,3 @@ index 401bc14..0bef727 100644
 -leanprover/lean4:v4.14.0
 \ No newline at end of file
 +leanprover/lean4:v4.14.0-rc1
-diff --git a/versions/v4.14.0-rc1.diff b/versions/v4.14.0-rc1.diff
-index fff1539..3ba7b47 100644
---- a/versions/v4.14.0-rc1.diff
-+++ b/versions/v4.14.0-rc1.diff
-@@ -1,7 +0,0 @@
--diff --git a/lean-toolchain b/lean-toolchain
--index 1e70935..0bef727 100644
----- a/lean-toolchain
--+++ b/lean-toolchain
--@@ -1 +1 @@
---leanprover/lean4:v4.14.0
--+leanprover/lean4:v4.14.0-rc1
