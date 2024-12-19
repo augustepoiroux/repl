@@ -1,0 +1,7 @@
+diff --git a/lean-toolchain b/lean-toolchain
+index 1e70935..0bef727 100644
+--- a/lean-toolchain
++++ b/lean-toolchain
+@@ -1 +1 @@
+-leanprover/lean4:v4.14.0
++leanprover/lean4:v4.14.0-rc1
