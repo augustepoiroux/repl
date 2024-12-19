@@ -134,169 +134,26 @@ index a4b97c3..32702be 100644
    let infotree ← if jsonTrees.isEmpty then
      pure none
 diff --git a/lean-toolchain b/lean-toolchain
-index 1e70935..8998520 100644
+index 1e70935..eff86fd 100644
 --- a/lean-toolchain
 +++ b/lean-toolchain
 @@ -1 +1 @@
 -leanprover/lean4:v4.14.0
-+leanprover/lean4:v4.12.0
-diff --git a/test/Mathlib/lake-manifest.json b/test/Mathlib/lake-manifest.json
-index f312e5a..34f725d 100644
---- a/test/Mathlib/lake-manifest.json
-+++ b/test/Mathlib/lake-manifest.json
-@@ -1,95 +1,85 @@
- {"version": "1.1.0",
-  "packagesDir": ".lake/packages",
-  "packages":
-- [{"url": "https://github.com/leanprover-community/mathlib4",
--   "type": "git",
--   "subDir": null,
--   "scope": "",
--   "rev": "4bbdccd9c5f862bf90ff12f0a9e2c8be032b9a84",
--   "name": "mathlib",
--   "manifestFile": "lake-manifest.json",
--   "inputRev": "v4.14.0",
--   "inherited": false,
--   "configFile": "lakefile.lean"},
--  {"url": "https://github.com/leanprover-community/plausible",
-+ [{"url": "https://github.com/leanprover-community/batteries",
-    "type": "git",
-    "subDir": null,
-    "scope": "leanprover-community",
--   "rev": "42dc02bdbc5d0c2f395718462a76c3d87318f7fa",
--   "name": "plausible",
-+   "rev": "4756e0fc48acce0cc808df0ad149de5973240df6",
-+   "name": "batteries",
-    "manifestFile": "lake-manifest.json",
-    "inputRev": "main",
-    "inherited": true,
--   "configFile": "lakefile.toml"},
--  {"url": "https://github.com/leanprover-community/LeanSearchClient",
-+   "configFile": "lakefile.lean"},
-+  {"url": "https://github.com/leanprover-community/quote4",
-    "type": "git",
-    "subDir": null,
-    "scope": "leanprover-community",
--   "rev": "d7caecce0d0f003fd5e9cce9a61f1dd6ba83142b",
--   "name": "LeanSearchClient",
-+   "rev": "2c8ae451ce9ffc83554322b14437159c1a9703f9",
-+   "name": "Qq",
-    "manifestFile": "lake-manifest.json",
--   "inputRev": "main",
-+   "inputRev": "master",
-    "inherited": true,
--   "configFile": "lakefile.toml"},
--  {"url": "https://github.com/leanprover-community/import-graph",
-+   "configFile": "lakefile.lean"},
-+  {"url": "https://github.com/leanprover-community/aesop",
-    "type": "git",
-    "subDir": null,
-    "scope": "leanprover-community",
--   "rev": "519e509a28864af5bed98033dd33b95cf08e9aa7",
--   "name": "importGraph",
-+   "rev": "28fa80508edc97d96ed6342c9a771a67189e0baa",
-+   "name": "aesop",
-    "manifestFile": "lake-manifest.json",
--   "inputRev": "v4.14.0",
-+   "inputRev": "master",
-    "inherited": true,
-    "configFile": "lakefile.toml"},
-   {"url": "https://github.com/leanprover-community/ProofWidgets4",
-    "type": "git",
-    "subDir": null,
-    "scope": "leanprover-community",
--   "rev": "68280daef58803f68368eb2e53046dabcd270c9d",
-+   "rev": "eb08eee94098fe530ccd6d8751a86fe405473d4c",
-    "name": "proofwidgets",
-    "manifestFile": "lake-manifest.json",
--   "inputRev": "v0.0.47",
-+   "inputRev": "v0.0.42",
-    "inherited": true,
-    "configFile": "lakefile.lean"},
--  {"url": "https://github.com/leanprover-community/aesop",
-+  {"url": "https://github.com/leanprover/lean4-cli",
-    "type": "git",
-    "subDir": null,
--   "scope": "leanprover-community",
--   "rev": "5a0ec8588855265ade536f35bcdcf0fb24fd6030",
--   "name": "aesop",
-+   "scope": "",
-+   "rev": "2cf1030dc2ae6b3632c84a09350b675ef3e347d0",
-+   "name": "Cli",
-    "manifestFile": "lake-manifest.json",
--   "inputRev": "v4.14.0",
-+   "inputRev": "main",
-    "inherited": true,
-    "configFile": "lakefile.toml"},
--  {"url": "https://github.com/leanprover-community/quote4",
-+  {"url": "https://github.com/leanprover-community/import-graph",
-    "type": "git",
-    "subDir": null,
-    "scope": "leanprover-community",
--   "rev": "303b23fbcea94ac4f96e590c1cad6618fd4f5f41",
--   "name": "Qq",
-+   "rev": "e285a7ade149c551c17a4b24f127e1ef782e4bb1",
-+   "name": "importGraph",
-    "manifestFile": "lake-manifest.json",
--   "inputRev": "master",
-+   "inputRev": "main",
-    "inherited": true,
--   "configFile": "lakefile.lean"},
--  {"url": "https://github.com/leanprover-community/batteries",
-+   "configFile": "lakefile.toml"},
-+  {"url": "https://github.com/leanprover-community/LeanSearchClient",
-    "type": "git",
-    "subDir": null,
-    "scope": "leanprover-community",
--   "rev": "8d6c853f11a5172efa0e96b9f2be1a83d861cdd9",
--   "name": "batteries",
-+   "rev": "2ba60fa2c384a94735454db11a2d523612eaabff",
-+   "name": "LeanSearchClient",
-    "manifestFile": "lake-manifest.json",
--   "inputRev": "v4.14.0",
-+   "inputRev": "main",
-    "inherited": true,
-    "configFile": "lakefile.toml"},
--  {"url": "https://github.com/leanprover/lean4-cli",
-+  {"url": "https://github.com/leanprover-community/mathlib4",
-    "type": "git",
-    "subDir": null,
--   "scope": "leanprover",
--   "rev": "726b3c9ad13acca724d4651f14afc4804a7b0e4d",
--   "name": "Cli",
-+   "scope": "",
-+   "rev": "809c3fb3b5c8f5d7dace56e200b426187516535a",
-+   "name": "mathlib",
-    "manifestFile": "lake-manifest.json",
--   "inputRev": "main",
--   "inherited": true,
--   "configFile": "lakefile.toml"}],
-+   "inputRev": "v4.12.0",
-+   "inherited": false,
-+   "configFile": "lakefile.lean"}],
-  "name": "«repl-mathlib-tests»",
-  "lakeDir": ".lake"}
-diff --git a/test/Mathlib/lakefile.toml b/test/Mathlib/lakefile.toml
-index 6ff9631..daea648 100644
---- a/test/Mathlib/lakefile.toml
-+++ b/test/Mathlib/lakefile.toml
-@@ -4,7 +4,7 @@ defaultTargets = ["ReplMathlibTests"]
- [[require]]
- name = "mathlib"
- git = "https://github.com/leanprover-community/mathlib4"
--rev = "v4.14.0"
-+rev = "v4.12.0"
++leanprover/lean4:v4.13.0-rc3
+diff --git a/test.sh b/test.sh
+index 070ce3d..282cd75 100755
+--- a/test.sh
++++ b/test.sh
+@@ -41,6 +41,6 @@ for infile in $IN_DIR/*.in; do
  
- [[lean_lib]]
- name = "ReplMathlibTests"
-diff --git a/test/Mathlib/lean-toolchain b/test/Mathlib/lean-toolchain
-index 401bc14..8998520 100644
---- a/test/Mathlib/lean-toolchain
-+++ b/test/Mathlib/lean-toolchain
-@@ -1 +1 @@
--leanprover/lean4:v4.14.0
-\ No newline at end of file
-+leanprover/lean4:v4.12.0
+ done
+ 
+-# Run the Mathlib tests
+-cp lean-toolchain test/Mathlib/
+-cd test/Mathlib/ && ./test.sh
++# Run the Mathlib tests - skipped as no Mathlib releases exist for v4.13.0-rc3
++# cp lean-toolchain test/Mathlib/
++# cd test/Mathlib/ && ./test.sh
 diff --git a/test/all_tactics.expected.out b/test/all_tactics.expected.out
 index 6ec808c..5374db8 100644
 --- a/test/all_tactics.expected.out
