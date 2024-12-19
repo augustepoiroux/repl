@@ -22,6 +22,7 @@ jobs:
     needs: gather-diffs
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         diff-file: ${{ fromJson(needs.gather-diffs.outputs.diff-files) }}
     name: Test with ${{ matrix.diff-file }}
@@ -29,10 +30,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
         with:
-          fetch-depth: 0 # Ensure full history for git commands
+          fetch-depth: 0
 
       - name: Apply diff
-        run: git apply "versions/${{ matrix.diff-file }}"
+        run: git apply "versions/${{ matrix.diff-file }}" --allow-empty
 
       - name: Install elan
         run: |
