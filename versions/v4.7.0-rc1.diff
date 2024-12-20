@@ -180,6 +180,27 @@ index f80f175..7eec48b 100644
   "packagesDir": ".lake/packages",
   "packages": [],
   "name": "REPL",
+diff --git a/lakefile.lean b/lakefile.lean
+new file mode 100644
+index 0000000..33dd0da
+--- /dev/null
++++ b/lakefile.lean
+@@ -0,0 +1,15 @@
++import Lake
++open Lake DSL
++
++package REPL {
++  -- add package configuration options here
++}
++
++lean_lib REPL {
++  -- add library configuration options here
++}
++
++@[default_target]
++lean_exe repl where
++  root := `REPL.Main
++  supportInterpreter := true
 diff --git a/lakefile.toml b/lakefile.toml
 deleted file mode 100644
 index 589e047..0000000
@@ -335,6 +356,23 @@ index f312e5a..812c31d 100644
 +   "configFile": "lakefile.lean"}],
   "name": "«repl-mathlib-tests»",
   "lakeDir": ".lake"}
+diff --git a/test/Mathlib/lakefile.lean b/test/Mathlib/lakefile.lean
+new file mode 100644
+index 0000000..34c561d
+--- /dev/null
++++ b/test/Mathlib/lakefile.lean
+@@ -0,0 +1,11 @@
++import Lake
++open Lake DSL
++
++package «repl-mathlib-tests» where
++  -- add package configuration options here
++  require mathlib from git "https://github.com/leanprover-community/mathlib4" @ "v4.7.0-rc1"
++
++@[default_target]
++lean_lib «ReplMathlibTests» where
++  globs := #[.submodules `test]
++  -- add library configuration options here
 diff --git a/test/Mathlib/lakefile.toml b/test/Mathlib/lakefile.toml
 deleted file mode 100644
 index 6ff9631..0000000
