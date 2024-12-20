@@ -11,7 +11,7 @@ index 9cc0914..a2bb150 100644
 +  let trees := s.infoState.trees.toList.drop commandState.infoState.trees.size
 +
 +  pure (s, msgs, trees)
-
+ 
  /--
  Process some text input, with or without an existing command state.
 diff --git a/REPL/JSON.lean b/REPL/JSON.lean
@@ -20,7 +20,7 @@ index d5c5ba2..b63c5ea 100644
 +++ b/REPL/JSON.lean
 @@ -83,7 +83,7 @@ structure Sorry where
  deriving FromJson
-
+ 
  instance : ToJson Sorry where
 -  toJson r := Json.mkObj <| .flatten [
 +  toJson r := Json.mkObj <| .join [
@@ -29,7 +29,7 @@ index d5c5ba2..b63c5ea 100644
      if r.pos.line ≠ 0 then [("pos", toJson r.pos)] else [],
 @@ -132,7 +132,7 @@ def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Jso
    | l  => [⟨k, toJson l⟩]
-
+ 
  instance : ToJson CommandResponse where
 -  toJson r := Json.mkObj <| .flatten [
 +  toJson r := Json.mkObj <| .join [
@@ -38,7 +38,7 @@ index d5c5ba2..b63c5ea 100644
      Json.nonemptyList "sorries" r.sorries,
 @@ -153,7 +153,7 @@ structure ProofStepResponse where
  deriving ToJson, FromJson
-
+ 
  instance : ToJson ProofStepResponse where
 -  toJson r := Json.mkObj <| .flatten [
 +  toJson r := Json.mkObj <| .join [
@@ -55,7 +55,7 @@ index 0b4be3c..61d4e76 100644
    let env ← importModules imports {} 0
 -  return (← env.replay (Std.HashMap.ofList map₂.toList), region)
 +  return (← env.replay (HashMap.ofList map₂.toList), region)
-
+ 
  end Lean.Environment
 diff --git a/REPL/Lean/InfoTree.lean b/REPL/Lean/InfoTree.lean
 index 7abf0b8..d3b28c1 100644
@@ -71,7 +71,7 @@ index 7abf0b8..d3b28c1 100644
 -      (children.toList.map (filter p m)).flatten
 +      (children.toList.map (filter p m)).join
    | .hole mvar => if m mvar then [.hole mvar] else []
-
+ 
  /-- Discard all nodes besides `.context` nodes and `TacticInfo` nodes. -/
 @@ -156,7 +156,7 @@ partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info →
    | context ctx t => t.findAllInfo (ctx.mergeIntoOuter? ctx?) p
@@ -81,18 +81,18 @@ index 7abf0b8..d3b28c1 100644
 +    let rest := ts.toList.bind (fun t => t.findAllInfo ctx? p)
      info ++ rest
    | _ => []
-
+ 
 @@ -214,13 +214,13 @@ def sorries (t : InfoTree) : List (ContextInfo × SorryType × Position × Posit
-
+ 
  def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × Position × Position × Array Name) :=
      -- HACK: creating a child ngen
--  t.findTacticNodes.map fun ⟨i, ctx⟩ =>
--    let range := stxRange ctx.fileMap i.stx
--    ( { ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 },
--      i.stx,
--      i.goalsBefore,
--      range.fst,
--      range.snd,
+-  t.findTacticNodes.map fun ⟨i, ctx⟩ => 
+-    let range := stxRange ctx.fileMap i.stx 
+-    ( { ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, 
+-      i.stx, 
+-      i.goalsBefore, 
+-      range.fst, 
+-      range.snd, 
 +  t.findTacticNodes.map fun ⟨i, ctx⟩ =>
 +    let range := stxRange ctx.fileMap i.stx
 +    ( { ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 },
@@ -101,15 +101,15 @@ index 7abf0b8..d3b28c1 100644
 +      range.fst,
 +      range.snd,
        i.getUsedConstantsAsSet.toArray )
-
-
+ 
+ 
 diff --git a/REPL/Main.lean b/REPL/Main.lean
 index a4b97c3..f990b22 100644
 --- a/REPL/Main.lean
 +++ b/REPL/Main.lean
 @@ -95,7 +95,7 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
    return id
-
+ 
  def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) :=
 -  trees.flatMap InfoTree.sorries |>.filter (fun t => match t.2.1 with
 +  trees.bind InfoTree.sorries |>.filter (fun t => match t.2.1 with
@@ -118,7 +118,7 @@ index a4b97c3..f990b22 100644
        fun ⟨ctx, g, pos, endPos⟩ => do
 @@ -117,7 +117,7 @@ def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
      pure "<failed to pretty print>"
-
+ 
  def tactics (trees : List InfoTree) : M m (List Tactic) :=
 -  trees.flatMap InfoTree.tactics |>.mapM
 +  trees.bind InfoTree.tactics |>.mapM
@@ -228,9 +228,9 @@ index 070ce3d..4a24ae9 100755
 --- a/test.sh
 +++ b/test.sh
 @@ -41,6 +41,6 @@ for infile in $IN_DIR/*.in; do
-
+ 
  done
-
+ 
 -# Run the Mathlib tests
 -cp lean-toolchain test/Mathlib/
 -cd test/Mathlib/ && ./test.sh
@@ -421,7 +421,7 @@ index 6ec808c..5374db8 100644
 +   "goals": "t : Nat ⊢ Nat",
     "endPos": {"line": 1, "column": 39}}],
   "env": 0}
-
+ 
 diff --git a/test/calc.expected.out b/test/calc.expected.out
 index 94f6a9f..fde8fee 100644
 --- a/test/calc.expected.out
@@ -471,14 +471,14 @@ index b4d885b..557d03b 100644
 +++ b/test/name_generator.expected.out
 @@ -24,13 +24,13 @@
   "goals": []}
-
+ 
  {"traces":
 - ["[Meta.Tactic.simp.rewrite] gt_iff_lt:1000, x > 0 ==> 0 < x",
 + ["[Meta.Tactic.simp.rewrite] @gt_iff_lt:1000, x > 0 ==> 0 < x",
    "[Meta.Tactic.simp.rewrite] h0:1000, 0 < x ==> True"],
   "proofState": 6,
   "goals": []}
-
+ 
  {"traces":
 - ["[Meta.Tactic.simp.rewrite] gt_iff_lt:1000, x > 0 ==> 0 < x",
 + ["[Meta.Tactic.simp.rewrite] @gt_iff_lt:1000, x > 0 ==> 0 < x",
@@ -500,7 +500,7 @@ index 5c89f5a..5be11b7 100644
 +   "endPos": {"line": 3, "column": 7},
 +   "data": "no goals to be solved"}],
   "env": 0}
-
+ 
 diff --git a/test/trace_simp.expected.out b/test/trace_simp.expected.out
 index 2a85844..1f6fbeb 100644
 --- a/test/trace_simp.expected.out
@@ -512,13 +512,14 @@ index 2a85844..1f6fbeb 100644
 -   "[Meta.Tactic.simp.rewrite] f_def:1000, f ==> 37\n[Meta.Tactic.simp.rewrite] eq_self:1000, 37 = 37 ==> True"}],
 +   "[Meta.Tactic.simp.rewrite] f_def:1000, f ==> 37\n[Meta.Tactic.simp.rewrite] @eq_self:1000, 37 = 37 ==> True"}],
   "env": 3}
-
+ 
  {"sorries":
 @@ -28,7 +28,7 @@
-
+ 
  {"traces":
   ["[Meta.Tactic.simp.rewrite] f_def:1000, f ==> 37",
 -  "[Meta.Tactic.simp.rewrite] eq_self:1000, 37 = 37 ==> True"],
 +  "[Meta.Tactic.simp.rewrite] @eq_self:1000, 37 = 37 ==> True"],
   "proofState": 2,
   "goals": []}
+ 
