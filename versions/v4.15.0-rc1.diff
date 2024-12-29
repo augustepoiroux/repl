@@ -1,0 +1,157 @@
+diff --git a/REPL/Lean/InfoTree.lean b/REPL/Lean/InfoTree.lean
+index 7abf0b8..b4ae0b0 100644
+--- a/REPL/Lean/InfoTree.lean
++++ b/REPL/Lean/InfoTree.lean
+@@ -63,6 +63,8 @@ def kind : Info → String
+   | .ofFVarAliasInfo      _ => "FVarAliasInfo"
+   | .ofFieldRedeclInfo    _ => "FieldRedeclInfo"
+   | .ofOmissionInfo       _ => "OmissionInfo"
++  | .ofChoiceInfo         _ => "ChoiceInfo"
++  | .ofPartialTermInfo    _ => "PartialTermInfo"
+ 
+ /-- The `Syntax` for a `Lean.Elab.Info`, if there is one. -/
+ def stx? : Info → Option Syntax
+@@ -78,6 +80,8 @@ def stx? : Info → Option Syntax
+   | .ofFVarAliasInfo      _    => none
+   | .ofFieldRedeclInfo    info => info.stx
+   | .ofOmissionInfo       info => info.stx
++  | .ofChoiceInfo         info => info.stx
++  | .ofPartialTermInfo    info => info.stx
+ 
+ /-- Is the `Syntax` for this `Lean.Elab.Info` original, or synthetic? -/
+ def isOriginal (i : Info) : Bool :=
+diff --git a/REPL/Snapshots.lean b/REPL/Snapshots.lean
+index 1114c24..af46521 100644
+--- a/REPL/Snapshots.lean
++++ b/REPL/Snapshots.lean
+@@ -222,7 +222,6 @@ structure CompactableCoreState where
+ open Lean.Meta in
+ /-- A copy of `Meta.Context` with closures omitted. -/
+ structure CompactableMetaContext where
+-  config            : Config               := {}
+   lctx              : LocalContext         := {}
+   localInstances    : LocalInstances       := #[]
+   defEqCtx?         : Option DefEqContext  := none
+diff --git a/lean-toolchain b/lean-toolchain
+index 1e70935..cf25a98 100644
+--- a/lean-toolchain
++++ b/lean-toolchain
+@@ -1 +1 @@
+-leanprover/lean4:v4.14.0
++leanprover/lean4:v4.15.0-rc1
+diff --git a/test/Mathlib/lake-manifest.json b/test/Mathlib/lake-manifest.json
+index f312e5a..60686a2 100644
+--- a/test/Mathlib/lake-manifest.json
++++ b/test/Mathlib/lake-manifest.json
+@@ -5,20 +5,20 @@
+    "type": "git",
+    "subDir": null,
+    "scope": "",
+-   "rev": "4bbdccd9c5f862bf90ff12f0a9e2c8be032b9a84",
++   "rev": "41ff1f7899c971f91362710d4444e338b8acd644",
+    "name": "mathlib",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.14.0",
++   "inputRev": "v4.15.0-rc1",
+    "inherited": false,
+    "configFile": "lakefile.lean"},
+   {"url": "https://github.com/leanprover-community/plausible",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "42dc02bdbc5d0c2f395718462a76c3d87318f7fa",
++   "rev": "8e5cb8d424df462f84997dd68af6f40e347c3e35",
+    "name": "plausible",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "main",
++   "inputRev": "v4.15.0-rc1",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+   {"url": "https://github.com/leanprover-community/LeanSearchClient",
+@@ -35,47 +35,47 @@
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "519e509a28864af5bed98033dd33b95cf08e9aa7",
++   "rev": "ed3b856bd8893ade75cafe13e8544d4c2660f377",
+    "name": "importGraph",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.14.0",
++   "inputRev": "v4.15.0-rc1",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+   {"url": "https://github.com/leanprover-community/ProofWidgets4",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "68280daef58803f68368eb2e53046dabcd270c9d",
++   "rev": "2b000e02d50394af68cfb4770a291113d94801b5",
+    "name": "proofwidgets",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v0.0.47",
++   "inputRev": "v0.0.48",
+    "inherited": true,
+    "configFile": "lakefile.lean"},
+   {"url": "https://github.com/leanprover-community/aesop",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "5a0ec8588855265ade536f35bcdcf0fb24fd6030",
++   "rev": "8b6048aa0a4a4b6bcf83597802d8dee734e64b7e",
+    "name": "aesop",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.14.0",
++   "inputRev": "v4.15.0-rc1",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+   {"url": "https://github.com/leanprover-community/quote4",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "303b23fbcea94ac4f96e590c1cad6618fd4f5f41",
++   "rev": "ad942fdf0b15c38bface6acbb01d63855a2519ac",
+    "name": "Qq",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "master",
++   "inputRev": "v4.14.0",
+    "inherited": true,
+    "configFile": "lakefile.lean"},
+   {"url": "https://github.com/leanprover-community/batteries",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "8d6c853f11a5172efa0e96b9f2be1a83d861cdd9",
++   "rev": "7805acf1864ba1a2e359f86a8f092ccf1438ad83",
+    "name": "batteries",
+    "manifestFile": "lake-manifest.json",
+    "inputRev": "v4.14.0",
+@@ -85,7 +85,7 @@
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover",
+-   "rev": "726b3c9ad13acca724d4651f14afc4804a7b0e4d",
++   "rev": "0c8ea32a15a4f74143e4e1e107ba2c412adb90fd",
+    "name": "Cli",
+    "manifestFile": "lake-manifest.json",
+    "inputRev": "main",
+diff --git a/test/Mathlib/lakefile.toml b/test/Mathlib/lakefile.toml
+index 6ff9631..ce5ace7 100644
+--- a/test/Mathlib/lakefile.toml
++++ b/test/Mathlib/lakefile.toml
+@@ -4,7 +4,7 @@ defaultTargets = ["ReplMathlibTests"]
+ [[require]]
+ name = "mathlib"
+ git = "https://github.com/leanprover-community/mathlib4"
+-rev = "v4.14.0"
++rev = "v4.15.0-rc1"
+ 
+ [[lean_lib]]
+ name = "ReplMathlibTests"
+diff --git a/test/Mathlib/lean-toolchain b/test/Mathlib/lean-toolchain
+index 401bc14..cf25a98 100644
+--- a/test/Mathlib/lean-toolchain
++++ b/test/Mathlib/lean-toolchain
+@@ -1 +1 @@
+-leanprover/lean4:v4.14.0
+\ No newline at end of file
++leanprover/lean4:v4.15.0-rc1
