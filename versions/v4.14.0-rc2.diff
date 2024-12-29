@@ -1,0 +1,21 @@
+diff --git a/lean-toolchain b/lean-toolchain
+index 1e70935..57a4710 100644
+--- a/lean-toolchain
++++ b/lean-toolchain
+@@ -1 +1 @@
+-leanprover/lean4:v4.14.0
++leanprover/lean4:v4.14.0-rc2
+diff --git a/test.sh b/test.sh
+index 070ce3d..6b71a78 100755
+--- a/test.sh
++++ b/test.sh
+@@ -41,6 +41,6 @@ for infile in $IN_DIR/*.in; do
+
+ done
+
+-# Run the Mathlib tests
+-cp lean-toolchain test/Mathlib/
+-cd test/Mathlib/ && ./test.sh
++# Run the Mathlib tests - skipped as no Mathlib releases exist for v4.14.0-rc2
++# cp lean-toolchain test/Mathlib/
++# cd test/Mathlib/ && ./test.sh

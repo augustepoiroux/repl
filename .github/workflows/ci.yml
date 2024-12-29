@@ -3,22 +3,47 @@ name: Run Tests
 on: [push, pull_request]
 
 jobs:
-  test:
+  gather-diffs:
     runs-on: ubuntu-latest
-
+    outputs:
+      diff-files: ${{ steps.get-diffs.outputs.diff-files }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: install elan
-      run: |
-        set -o pipefail
-        curl -sSfL https://github.com/leanprover/elan/releases/download/v3.0.0/elan-x86_64-unknown-linux-gnu.tar.gz | tar xz
-        ./elan-init -y --default-toolchain none
-        echo "$HOME/.elan/bin" >> $GITHUB_PATH
+      - name: Get list of diff files
+        id: get-diffs
+        shell: bash
+        run: |
+          diff_files=$(find versions -name '*.diff' -printf '%P\n' | jq -R -s -c 'split("\n")[:-1]')
+          echo "diff-files=$diff_files" >> $GITHUB_OUTPUT
 
-    - name: build
-      run: lake build
+  test:
+    needs: gather-diffs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        diff-file: ${{ fromJson(needs.gather-diffs.outputs.diff-files) }}
+    name: Test with ${{ matrix.diff-file }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
-    - name: Run tests
-      run: ./test.sh
+      - name: Apply diff
+        run: git apply "versions/${{ matrix.diff-file }}" --allow-empty
+
+      - name: Install elan
+        run: |
+          set -o pipefail
+          curl -sSfL https://github.com/leanprover/elan/releases/download/v3.0.0/elan-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          ./elan-init -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+
+      - name: Build
+        run: lake build
+
+      - name: Run tests
+        run: ./test.sh
