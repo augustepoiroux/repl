@@ -142,26 +142,6 @@ index a4b97c3..32702be 100644
    | _ => []
    let infotree ← if jsonTrees.isEmpty then
      pure none
-diff --git a/REPL/Snapshots.lean b/REPL/Snapshots.lean
-index 7297700..1114c24 100644
---- a/REPL/Snapshots.lean
-+++ b/REPL/Snapshots.lean
-@@ -259,14 +259,13 @@ When pickling the `Environment`, we do so relative to its imports.
- def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
-   let env := p.coreState.env
-   let p' := { p with coreState := { p.coreState with env := ← mkEmptyEnvironment }}
--  let (cfg, _) ← Lean.Meta.getConfig.toIO p'.coreContext p'.coreState p'.metaContext p'.metaState
-   _root_.pickle path
-     (env.header.imports,
-      env.constants.map₂,
-      ({ p'.coreState with } : CompactableCoreState),
-      p'.coreContext,
-      p'.metaState,
--     ({ p'.metaContext with config := cfg } : CompactableMetaContext),
-+     ({ p'.metaContext with } : CompactableMetaContext),
-      p'.termState,
-      ({ p'.termContext with } : CompactableTermContext),
-      p'.tacticState,
 diff --git a/lean-toolchain b/lean-toolchain
 index d0eb99f..8998520 100644
 --- a/lean-toolchain

@@ -155,7 +155,7 @@ index a4b97c3..51f2d4a 100644
    let infotree ← if jsonTrees.isEmpty then
      pure none
 diff --git a/REPL/Snapshots.lean b/REPL/Snapshots.lean
-index 7297700..7462141 100644
+index 7297700..654d858 100644
 --- a/REPL/Snapshots.lean
 +++ b/REPL/Snapshots.lean
 @@ -83,7 +83,7 @@ def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsa
@@ -167,23 +167,7 @@ index 7297700..7462141 100644
    let p' : CommandSnapshot :=
    { cmdState := { cmdState with env }
      cmdContext }
-@@ -259,14 +259,13 @@ When pickling the `Environment`, we do so relative to its imports.
- def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
-   let env := p.coreState.env
-   let p' := { p with coreState := { p.coreState with env := ← mkEmptyEnvironment }}
--  let (cfg, _) ← Lean.Meta.getConfig.toIO p'.coreContext p'.coreState p'.metaContext p'.metaState
-   _root_.pickle path
-     (env.header.imports,
-      env.constants.map₂,
-      ({ p'.coreState with } : CompactableCoreState),
-      p'.coreContext,
-      p'.metaState,
--     ({ p'.metaContext with config := cfg } : CompactableMetaContext),
-+     ({ p'.metaContext with } : CompactableMetaContext),
-      p'.termState,
-      ({ p'.termContext with } : CompactableTermContext),
-      p'.tacticState,
-@@ -285,9 +284,9 @@ def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
+@@ -285,9 +285,9 @@ def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
    let env ← match cmd? with
    | none =>
      enableInitializersExecution
