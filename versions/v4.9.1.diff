@@ -58,10 +58,40 @@ index 0b4be3c..61d4e76 100644
  
  end Lean.Environment
 diff --git a/REPL/Lean/InfoTree.lean b/REPL/Lean/InfoTree.lean
-index 7abf0b8..d3b28c1 100644
+index 88ec289..d3b28c1 100644
 --- a/REPL/Lean/InfoTree.lean
 +++ b/REPL/Lean/InfoTree.lean
-@@ -131,9 +131,9 @@ partial def filter (p : Info → Bool) (m : MVarId → Bool := fun _ => false) :
+@@ -53,7 +53,6 @@ namespace Lean.Elab.Info
+ def kind : Info → String
+   | .ofTacticInfo         _ => "TacticInfo"
+   | .ofTermInfo           _ => "TermInfo"
+-  | ofPartialTermInfo     _ => "PartialTermInfo"
+   | .ofCommandInfo        _ => "CommmandInfo"
+   | .ofMacroExpansionInfo _ => "MacroExpansionInfo"
+   | .ofOptionInfo         _ => "OptionInfo"
+@@ -64,13 +63,11 @@ def kind : Info → String
+   | .ofFVarAliasInfo      _ => "FVarAliasInfo"
+   | .ofFieldRedeclInfo    _ => "FieldRedeclInfo"
+   | .ofOmissionInfo       _ => "OmissionInfo"
+-  | .ofChoiceInfo         _ => "ChoiceInfo"
+ 
+ /-- The `Syntax` for a `Lean.Elab.Info`, if there is one. -/
+ def stx? : Info → Option Syntax
+   | .ofTacticInfo         info => info.stx
+   | .ofTermInfo           info => info.stx
+-  | ofPartialTermInfo     info => info.stx
+   | .ofCommandInfo        info => info.stx
+   | .ofMacroExpansionInfo info => info.stx
+   | .ofOptionInfo         info => info.stx
+@@ -81,7 +78,6 @@ def stx? : Info → Option Syntax
+   | .ofFVarAliasInfo      _    => none
+   | .ofFieldRedeclInfo    info => info.stx
+   | .ofOmissionInfo       info => info.stx
+-  | .ofChoiceInfo         info => info.stx
+ 
+ /-- Is the `Syntax` for this `Lean.Elab.Info` original, or synthetic? -/
+ def isOriginal (i : Info) : Bool :=
+@@ -135,9 +131,9 @@ partial def filter (p : Info → Bool) (m : MVarId → Bool := fun _ => false) :
    | .context ctx tree => tree.filter p m |>.map (.context ctx)
    | .node info children =>
      if p info then
@@ -73,7 +103,7 @@ index 7abf0b8..d3b28c1 100644
    | .hole mvar => if m mvar then [.hole mvar] else []
  
  /-- Discard all nodes besides `.context` nodes and `TacticInfo` nodes. -/
-@@ -156,7 +156,7 @@ partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info →
+@@ -160,7 +156,7 @@ partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info →
    | context ctx t => t.findAllInfo (ctx.mergeIntoOuter? ctx?) p
    | node i ts  =>
      let info := if p i then [(i, ctx?)] else []
@@ -81,27 +111,6 @@ index 7abf0b8..d3b28c1 100644
 +    let rest := ts.toList.bind (fun t => t.findAllInfo ctx? p)
      info ++ rest
    | _ => []
- 
-@@ -214,13 +214,13 @@ def sorries (t : InfoTree) : List (ContextInfo × SorryType × Position × Posit
- 
- def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × Position × Position × Array Name) :=
-     -- HACK: creating a child ngen
--  t.findTacticNodes.map fun ⟨i, ctx⟩ => 
--    let range := stxRange ctx.fileMap i.stx 
--    ( { ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, 
--      i.stx, 
--      i.goalsBefore, 
--      range.fst, 
--      range.snd, 
-+  t.findTacticNodes.map fun ⟨i, ctx⟩ =>
-+    let range := stxRange ctx.fileMap i.stx
-+    ( { ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 },
-+      i.stx,
-+      i.goalsBefore,
-+      range.fst,
-+      range.snd,
-       i.getUsedConstantsAsSet.toArray )
- 
  
 diff --git a/REPL/Main.lean b/REPL/Main.lean
 index a4b97c3..8211b8c 100644
@@ -139,7 +148,7 @@ index a4b97c3..8211b8c 100644
    let infotree ← if jsonTrees.isEmpty then
      pure none
 diff --git a/REPL/Snapshots.lean b/REPL/Snapshots.lean
-index 1114c24..7462141 100644
+index 7297700..7462141 100644
 --- a/REPL/Snapshots.lean
 +++ b/REPL/Snapshots.lean
 @@ -83,7 +83,7 @@ def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsa
@@ -151,7 +160,23 @@ index 1114c24..7462141 100644
    let p' : CommandSnapshot :=
    { cmdState := { cmdState with env }
      cmdContext }
-@@ -284,9 +284,9 @@ def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
+@@ -259,14 +259,13 @@ When pickling the `Environment`, we do so relative to its imports.
+ def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
+   let env := p.coreState.env
+   let p' := { p with coreState := { p.coreState with env := ← mkEmptyEnvironment }}
+-  let (cfg, _) ← Lean.Meta.getConfig.toIO p'.coreContext p'.coreState p'.metaContext p'.metaState
+   _root_.pickle path
+     (env.header.imports,
+      env.constants.map₂,
+      ({ p'.coreState with } : CompactableCoreState),
+      p'.coreContext,
+      p'.metaState,
+-     ({ p'.metaContext with config := cfg } : CompactableMetaContext),
++     ({ p'.metaContext with } : CompactableMetaContext),
+      p'.termState,
+      ({ p'.termContext with } : CompactableTermContext),
+      p'.tacticState,
+@@ -285,9 +284,9 @@ def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
    let env ← match cmd? with
    | none =>
      enableInitializersExecution
@@ -164,14 +189,14 @@ index 1114c24..7462141 100644
    { coreState := { coreState with env }
      coreContext
 diff --git a/lean-toolchain b/lean-toolchain
-index 1e70935..acd5c69 100644
+index d0eb99f..acd5c69 100644
 --- a/lean-toolchain
 +++ b/lean-toolchain
 @@ -1 +1 @@
--leanprover/lean4:v4.14.0
+-leanprover/lean4:v4.15.0
 +leanprover/lean4:v4.9.1
 diff --git a/test/Mathlib/lake-manifest.json b/test/Mathlib/lake-manifest.json
-index f312e5a..dc5a124 100644
+index ddd07cb..dc5a124 100644
 --- a/test/Mathlib/lake-manifest.json
 +++ b/test/Mathlib/lake-manifest.json
 @@ -1,95 +1,68 @@
@@ -184,22 +209,22 @@ index f312e5a..dc5a124 100644
     "type": "git",
     "subDir": null,
 -   "scope": "",
--   "rev": "4bbdccd9c5f862bf90ff12f0a9e2c8be032b9a84",
+-   "rev": "e9ae2a61ef5c99d6edac84f0d04f6324c5d97f67",
 -   "name": "mathlib",
 -   "manifestFile": "lake-manifest.json",
--   "inputRev": "v4.14.0",
+-   "inputRev": "v4.15.0-patch1",
 -   "inherited": false,
 -   "configFile": "lakefile.lean"},
 -  {"url": "https://github.com/leanprover-community/plausible",
 -   "type": "git",
 -   "subDir": null,
 -   "scope": "leanprover-community",
--   "rev": "42dc02bdbc5d0c2f395718462a76c3d87318f7fa",
+-   "rev": "2c57364ef83406ea86d0f78ce3e342079a2fece5",
 -   "name": "plausible",
 +   "rev": "dcea9ce8aba248927fb2ea8d5752bfe1e3fe7b44",
 +   "name": "batteries",
     "manifestFile": "lake-manifest.json",
--   "inputRev": "main",
+-   "inputRev": "v4.15.0",
 +   "inputRev": "v4.9.1",
     "inherited": true,
 -   "configFile": "lakefile.toml"},
@@ -209,7 +234,7 @@ index f312e5a..dc5a124 100644
     "type": "git",
     "subDir": null,
 -   "scope": "leanprover-community",
--   "rev": "d7caecce0d0f003fd5e9cce9a61f1dd6ba83142b",
+-   "rev": "003ff459cdd85de551f4dcf95cdfeefe10f20531",
 -   "name": "LeanSearchClient",
 +   "rev": "a7bfa63f5dddbcab2d4e0569c4cac74b2585e2c6",
 +   "name": "Qq",
@@ -224,12 +249,12 @@ index f312e5a..dc5a124 100644
     "type": "git",
     "subDir": null,
 -   "scope": "leanprover-community",
--   "rev": "519e509a28864af5bed98033dd33b95cf08e9aa7",
+-   "rev": "9a0b533c2fbd6195df067630be18e11e4349051c",
 -   "name": "importGraph",
 +   "rev": "06cca4bd36b2af743d4858c5cc31604aa9da26bc",
 +   "name": "aesop",
     "manifestFile": "lake-manifest.json",
--   "inputRev": "v4.14.0",
+-   "inputRev": "v4.15.0",
 +   "inputRev": "master",
     "inherited": true,
     "configFile": "lakefile.toml"},
@@ -237,11 +262,11 @@ index f312e5a..dc5a124 100644
     "type": "git",
     "subDir": null,
 -   "scope": "leanprover-community",
--   "rev": "68280daef58803f68368eb2e53046dabcd270c9d",
+-   "rev": "2b000e02d50394af68cfb4770a291113d94801b5",
 +   "rev": "87c1e7a427d8e21b6eaf8401f12897f52e2c3be9",
     "name": "proofwidgets",
     "manifestFile": "lake-manifest.json",
--   "inputRev": "v0.0.47",
+-   "inputRev": "v0.0.48",
 +   "inputRev": "v0.0.38",
     "inherited": true,
     "configFile": "lakefile.lean"},
@@ -249,10 +274,10 @@ index f312e5a..dc5a124 100644
 -   "type": "git",
 -   "subDir": null,
 -   "scope": "leanprover-community",
--   "rev": "5a0ec8588855265ade536f35bcdcf0fb24fd6030",
+-   "rev": "2689851f387bb2cef351e6825fe94a56a304ca13",
 -   "name": "aesop",
 -   "manifestFile": "lake-manifest.json",
--   "inputRev": "v4.14.0",
+-   "inputRev": "v4.15.0",
 -   "inherited": true,
 -   "configFile": "lakefile.toml"},
 -  {"url": "https://github.com/leanprover-community/quote4",
@@ -260,26 +285,27 @@ index f312e5a..dc5a124 100644
     "type": "git",
     "subDir": null,
 -   "scope": "leanprover-community",
--   "rev": "303b23fbcea94ac4f96e590c1cad6618fd4f5f41",
+-   "rev": "f0c584bcb14c5adfb53079781eeea75b26ebbd32",
 -   "name": "Qq",
 +   "rev": "a11566029bd9ec4f68a65394e8c3ff1af74c1a29",
 +   "name": "Cli",
     "manifestFile": "lake-manifest.json",
--   "inputRev": "master",
+-   "inputRev": "v4.15.0",
 +   "inputRev": "main",
     "inherited": true,
-    "configFile": "lakefile.lean"},
+-   "configFile": "lakefile.toml"},
 -  {"url": "https://github.com/leanprover-community/batteries",
++   "configFile": "lakefile.lean"},
 +  {"url": "https://github.com/leanprover-community/import-graph.git",
     "type": "git",
     "subDir": null,
 -   "scope": "leanprover-community",
--   "rev": "8d6c853f11a5172efa0e96b9f2be1a83d861cdd9",
+-   "rev": "e8dc5fc16c625fc4fe08f42d625523275ddbbb4b",
 -   "name": "batteries",
 +   "rev": "c29c3cdce415240e9dcec5c583ad5d36f83f9c71",
 +   "name": "importGraph",
     "manifestFile": "lake-manifest.json",
--   "inputRev": "v4.14.0",
+-   "inputRev": "v4.15.0",
 +   "inputRev": "main",
     "inherited": true,
     "configFile": "lakefile.toml"},
@@ -288,7 +314,7 @@ index f312e5a..dc5a124 100644
     "type": "git",
     "subDir": null,
 -   "scope": "leanprover",
--   "rev": "726b3c9ad13acca724d4651f14afc4804a7b0e4d",
+-   "rev": "0c8ea32a15a4f74143e4e1e107ba2c412adb90fd",
 -   "name": "Cli",
 +   "rev": "09d33efc68d3ad52db77b731d7253675395a14aa",
 +   "name": "mathlib",
@@ -302,25 +328,24 @@ index f312e5a..dc5a124 100644
   "name": "«repl-mathlib-tests»",
   "lakeDir": ".lake"}
 diff --git a/test/Mathlib/lakefile.toml b/test/Mathlib/lakefile.toml
-index 6ff9631..f25faeb 100644
+index 7e31e6c..f25faeb 100644
 --- a/test/Mathlib/lakefile.toml
 +++ b/test/Mathlib/lakefile.toml
 @@ -4,7 +4,7 @@ defaultTargets = ["ReplMathlibTests"]
  [[require]]
  name = "mathlib"
  git = "https://github.com/leanprover-community/mathlib4"
--rev = "v4.14.0"
+-rev = "v4.15.0-patch1"
 +rev = "v4.9.1"
  
  [[lean_lib]]
  name = "ReplMathlibTests"
 diff --git a/test/Mathlib/lean-toolchain b/test/Mathlib/lean-toolchain
-index 401bc14..acd5c69 100644
+index d0eb99f..acd5c69 100644
 --- a/test/Mathlib/lean-toolchain
 +++ b/test/Mathlib/lean-toolchain
 @@ -1 +1 @@
--leanprover/lean4:v4.14.0
-\ No newline at end of file
+-leanprover/lean4:v4.15.0
 +leanprover/lean4:v4.9.1
 diff --git a/test/all_tactics.expected.out b/test/all_tactics.expected.out
 index 6ec808c..5374db8 100644
