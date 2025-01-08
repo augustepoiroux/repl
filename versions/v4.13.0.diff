@@ -1,0 +1,370 @@
+diff --git a/REPL/JSON.lean b/REPL/JSON.lean
+index d5c5ba2..b63c5ea 100644
+--- a/REPL/JSON.lean
++++ b/REPL/JSON.lean
+@@ -83,7 +83,7 @@ structure Sorry where
+ deriving FromJson
+ 
+ instance : ToJson Sorry where
+-  toJson r := Json.mkObj <| .flatten [
++  toJson r := Json.mkObj <| .join [
+     [("goal", r.goal)],
+     [("proofState", toJson r.proofState)],
+     if r.pos.line ≠ 0 then [("pos", toJson r.pos)] else [],
+@@ -132,7 +132,7 @@ def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Jso
+   | l  => [⟨k, toJson l⟩]
+ 
+ instance : ToJson CommandResponse where
+-  toJson r := Json.mkObj <| .flatten [
++  toJson r := Json.mkObj <| .join [
+     [("env", r.env)],
+     Json.nonemptyList "messages" r.messages,
+     Json.nonemptyList "sorries" r.sorries,
+@@ -153,7 +153,7 @@ structure ProofStepResponse where
+ deriving ToJson, FromJson
+ 
+ instance : ToJson ProofStepResponse where
+-  toJson r := Json.mkObj <| .flatten [
++  toJson r := Json.mkObj <| .join [
+     [("proofState", r.proofState)],
+     [("goals", toJson r.goals)],
+     Json.nonemptyList "messages" r.messages,
+diff --git a/REPL/Lean/InfoTree.lean b/REPL/Lean/InfoTree.lean
+index 88ec289..d3b28c1 100644
+--- a/REPL/Lean/InfoTree.lean
++++ b/REPL/Lean/InfoTree.lean
+@@ -53,7 +53,6 @@ namespace Lean.Elab.Info
+ def kind : Info → String
+   | .ofTacticInfo         _ => "TacticInfo"
+   | .ofTermInfo           _ => "TermInfo"
+-  | ofPartialTermInfo     _ => "PartialTermInfo"
+   | .ofCommandInfo        _ => "CommmandInfo"
+   | .ofMacroExpansionInfo _ => "MacroExpansionInfo"
+   | .ofOptionInfo         _ => "OptionInfo"
+@@ -64,13 +63,11 @@ def kind : Info → String
+   | .ofFVarAliasInfo      _ => "FVarAliasInfo"
+   | .ofFieldRedeclInfo    _ => "FieldRedeclInfo"
+   | .ofOmissionInfo       _ => "OmissionInfo"
+-  | .ofChoiceInfo         _ => "ChoiceInfo"
+ 
+ /-- The `Syntax` for a `Lean.Elab.Info`, if there is one. -/
+ def stx? : Info → Option Syntax
+   | .ofTacticInfo         info => info.stx
+   | .ofTermInfo           info => info.stx
+-  | ofPartialTermInfo     info => info.stx
+   | .ofCommandInfo        info => info.stx
+   | .ofMacroExpansionInfo info => info.stx
+   | .ofOptionInfo         info => info.stx
+@@ -81,7 +78,6 @@ def stx? : Info → Option Syntax
+   | .ofFVarAliasInfo      _    => none
+   | .ofFieldRedeclInfo    info => info.stx
+   | .ofOmissionInfo       info => info.stx
+-  | .ofChoiceInfo         info => info.stx
+ 
+ /-- Is the `Syntax` for this `Lean.Elab.Info` original, or synthetic? -/
+ def isOriginal (i : Info) : Bool :=
+@@ -135,9 +131,9 @@ partial def filter (p : Info → Bool) (m : MVarId → Bool := fun _ => false) :
+   | .context ctx tree => tree.filter p m |>.map (.context ctx)
+   | .node info children =>
+     if p info then
+-      [.node info (children.toList.map (filter p m)).flatten.toPArray']
++      [.node info (children.toList.map (filter p m)).join.toPArray']
+     else
+-      (children.toList.map (filter p m)).flatten
++      (children.toList.map (filter p m)).join
+   | .hole mvar => if m mvar then [.hole mvar] else []
+ 
+ /-- Discard all nodes besides `.context` nodes and `TacticInfo` nodes. -/
+@@ -160,7 +156,7 @@ partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info →
+   | context ctx t => t.findAllInfo (ctx.mergeIntoOuter? ctx?) p
+   | node i ts  =>
+     let info := if p i then [(i, ctx?)] else []
+-    let rest := ts.toList.flatMap (fun t => t.findAllInfo ctx? p)
++    let rest := ts.toList.bind (fun t => t.findAllInfo ctx? p)
+     info ++ rest
+   | _ => []
+ 
+diff --git a/REPL/Main.lean b/REPL/Main.lean
+index a4b97c3..32702be 100644
+--- a/REPL/Main.lean
++++ b/REPL/Main.lean
+@@ -95,7 +95,7 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
+   return id
+ 
+ def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) :=
+-  trees.flatMap InfoTree.sorries |>.filter (fun t => match t.2.1 with
++  trees.bind InfoTree.sorries |>.filter (fun t => match t.2.1 with
+     | .term _ none => false
+     | _ => true ) |>.mapM
+       fun ⟨ctx, g, pos, endPos⟩ => do
+@@ -117,7 +117,7 @@ def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
+     pure "<failed to pretty print>"
+ 
+ def tactics (trees : List InfoTree) : M m (List Tactic) :=
+-  trees.flatMap InfoTree.tactics |>.mapM
++  trees.bind InfoTree.tactics |>.mapM
+     fun ⟨ctx, stx, goals, pos, endPos, ns⟩ => do
+       let proofState := some (← ProofSnapshot.create ctx none none goals)
+       let goals := s!"{(← ctx.ppGoals goals)}".trim
+@@ -184,6 +184,14 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
+   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
+   Sum.inl <$> createProofStepReponse proofState
+ 
++partial def filterRootTactics (tree : InfoTree) : Bool :=
++  match tree with
++  | InfoTree.hole _     => true
++  | InfoTree.context _ t => filterRootTactics t
++  | InfoTree.node i _   => match i with
++      | .ofTacticInfo _ => false
++      | _ => true
++
+ /--
+ Run a command, returning the id of the new environment, and any messages and sorries.
+ -/
+@@ -201,6 +209,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
+   catch ex =>
+     return .inr ⟨ex.toString⟩
+   let messages ← messages.mapM fun m => Message.of m
++  let trees := trees.filter filterRootTactics
+   -- For debugging purposes, sometimes we print out the trees here:
+   -- trees.forM fun t => do IO.println (← t.format)
+   let sorries ← sorries trees (initialCmdState?.map (·.env))
+@@ -218,9 +227,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
+   let env ← recordCommandSnapshot cmdSnapshot
+   let jsonTrees := match s.infotree with
+   | some "full" => trees
+-  | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
+-  | some "original" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainOriginal
+-  | some "substantive" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainSubstantive
++  | some "tactics" => trees.bind InfoTree.retainTacticInfo
++  | some "original" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainOriginal
++  | some "substantive" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainSubstantive
+   | _ => []
+   let infotree ← if jsonTrees.isEmpty then
+     pure none
+diff --git a/lean-toolchain b/lean-toolchain
+index d0eb99f..4f86f95 100644
+--- a/lean-toolchain
++++ b/lean-toolchain
+@@ -1 +1 @@
+-leanprover/lean4:v4.15.0
++leanprover/lean4:v4.13.0
+diff --git a/test/Mathlib/lake-manifest.json b/test/Mathlib/lake-manifest.json
+index ddd07cb..bfca34d 100644
+--- a/test/Mathlib/lake-manifest.json
++++ b/test/Mathlib/lake-manifest.json
+@@ -1,95 +1,95 @@
+ {"version": "1.1.0",
+  "packagesDir": ".lake/packages",
+  "packages":
+- [{"url": "https://github.com/leanprover-community/mathlib4",
+-   "type": "git",
+-   "subDir": null,
+-   "scope": "",
+-   "rev": "e9ae2a61ef5c99d6edac84f0d04f6324c5d97f67",
+-   "name": "mathlib",
+-   "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.15.0-patch1",
+-   "inherited": false,
+-   "configFile": "lakefile.lean"},
+-  {"url": "https://github.com/leanprover-community/plausible",
++ [{"url": "https://github.com/leanprover-community/batteries",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "2c57364ef83406ea86d0f78ce3e342079a2fece5",
+-   "name": "plausible",
++   "rev": "31a10a332858d6981dbcf55d54ee51680dd75f18",
++   "name": "batteries",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.15.0",
++   "inputRev": "main",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+-  {"url": "https://github.com/leanprover-community/LeanSearchClient",
++  {"url": "https://github.com/leanprover-community/quote4",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "003ff459cdd85de551f4dcf95cdfeefe10f20531",
+-   "name": "LeanSearchClient",
++   "rev": "1357f4f49450abb9dfd4783e38219f4ce84f9785",
++   "name": "Qq",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "main",
++   "inputRev": "master",
+    "inherited": true,
+-   "configFile": "lakefile.toml"},
+-  {"url": "https://github.com/leanprover-community/import-graph",
++   "configFile": "lakefile.lean"},
++  {"url": "https://github.com/leanprover-community/aesop",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "9a0b533c2fbd6195df067630be18e11e4349051c",
+-   "name": "importGraph",
++   "rev": "5f934891e11d70a1b86e302fdf9cecfc21e8de46",
++   "name": "aesop",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.15.0",
++   "inputRev": "master",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+   {"url": "https://github.com/leanprover-community/ProofWidgets4",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "2b000e02d50394af68cfb4770a291113d94801b5",
++   "rev": "23268f52d3505955de3c26a42032702c25cfcbf8",
+    "name": "proofwidgets",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v0.0.48",
++   "inputRev": "v0.0.44",
+    "inherited": true,
+    "configFile": "lakefile.lean"},
+-  {"url": "https://github.com/leanprover-community/aesop",
++  {"url": "https://github.com/leanprover/lean4-cli",
+    "type": "git",
+    "subDir": null,
+-   "scope": "leanprover-community",
+-   "rev": "2689851f387bb2cef351e6825fe94a56a304ca13",
+-   "name": "aesop",
++   "scope": "leanprover",
++   "rev": "2cf1030dc2ae6b3632c84a09350b675ef3e347d0",
++   "name": "Cli",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.15.0",
++   "inputRev": "main",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+-  {"url": "https://github.com/leanprover-community/quote4",
++  {"url": "https://github.com/leanprover-community/import-graph",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "f0c584bcb14c5adfb53079781eeea75b26ebbd32",
+-   "name": "Qq",
++   "rev": "984d7ee170b75d6b03c0903e0b750ee2c6d1e3fb",
++   "name": "importGraph",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.15.0",
++   "inputRev": "main",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+-  {"url": "https://github.com/leanprover-community/batteries",
++  {"url": "https://github.com/leanprover-community/LeanSearchClient",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "e8dc5fc16c625fc4fe08f42d625523275ddbbb4b",
+-   "name": "batteries",
++   "rev": "7bedaed1ef024add1e171cc17706b012a9a37802",
++   "name": "LeanSearchClient",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.15.0",
++   "inputRev": "main",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+-  {"url": "https://github.com/leanprover/lean4-cli",
++  {"url": "https://github.com/leanprover-community/plausible",
+    "type": "git",
+    "subDir": null,
+-   "scope": "leanprover",
+-   "rev": "0c8ea32a15a4f74143e4e1e107ba2c412adb90fd",
+-   "name": "Cli",
++   "scope": "leanprover-community",
++   "rev": "d212dd74414e997653cd3484921f4159c955ccca",
++   "name": "plausible",
+    "manifestFile": "lake-manifest.json",
+    "inputRev": "main",
+    "inherited": true,
+-   "configFile": "lakefile.toml"}],
++   "configFile": "lakefile.toml"},
++  {"url": "https://github.com/leanprover-community/mathlib4",
++   "type": "git",
++   "subDir": null,
++   "scope": "",
++   "rev": "d7317655e2826dc1f1de9a0c138db2775c4bb841",
++   "name": "mathlib",
++   "manifestFile": "lake-manifest.json",
++   "inputRev": "v4.13.0",
++   "inherited": false,
++   "configFile": "lakefile.lean"}],
+  "name": "«repl-mathlib-tests»",
+  "lakeDir": ".lake"}
+diff --git a/test/Mathlib/lakefile.toml b/test/Mathlib/lakefile.toml
+index 7e31e6c..c7e1ebf 100644
+--- a/test/Mathlib/lakefile.toml
++++ b/test/Mathlib/lakefile.toml
+@@ -4,7 +4,7 @@ defaultTargets = ["ReplMathlibTests"]
+ [[require]]
+ name = "mathlib"
+ git = "https://github.com/leanprover-community/mathlib4"
+-rev = "v4.15.0-patch1"
++rev = "v4.13.0"
+ 
+ [[lean_lib]]
+ name = "ReplMathlibTests"
+diff --git a/test/Mathlib/lean-toolchain b/test/Mathlib/lean-toolchain
+index d0eb99f..4f86f95 100644
+--- a/test/Mathlib/lean-toolchain
++++ b/test/Mathlib/lean-toolchain
+@@ -1 +1 @@
+-leanprover/lean4:v4.15.0
++leanprover/lean4:v4.13.0
+diff --git a/test/all_tactics.expected.out b/test/all_tactics.expected.out
+index 6ec808c..5374db8 100644
+--- a/test/all_tactics.expected.out
++++ b/test/all_tactics.expected.out
+@@ -9,7 +9,7 @@
+    "tactic": "exact t",
+    "proofState": 1,
+    "pos": {"line": 1, "column": 32},
+-   "goals": "t : Nat\n⊢ Nat",
++   "goals": "t : Nat ⊢ Nat",
+    "endPos": {"line": 1, "column": 39}}],
+  "env": 0}
+ 
+diff --git a/test/calc.expected.out b/test/calc.expected.out
+index 94f6a9f..fde8fee 100644
+--- a/test/calc.expected.out
++++ b/test/calc.expected.out
+@@ -1,35 +1,22 @@
+ {"tactics":
+  [{"usedConstants":
+-   ["Trans.trans",
+-    "sorryAx",
+-    "instOfNatNat",
+-    "instTransEq",
+-    "Nat",
+-    "OfNat.ofNat",
+-    "Bool.false",
+-    "Eq"],
++   ["Trans.trans", "instOfNatNat", "instTransEq", "Nat", "OfNat.ofNat", "Eq"],
+    "tactic": "calc\n  3 = 4 := by sorry\n  4 = 5 := by sorry",
+    "proofState": 2,
+    "pos": {"line": 1, "column": 22},
+    "goals": "⊢ 3 = 5",
+    "endPos": {"line": 3, "column": 19}},
+-  {"usedConstants": [],
+-   "tactic": "\n  3 = 4 := by sorry\n  4 = 5 := by sorry",
+-   "proofState": 3,
+-   "pos": {"line": 2, "column": 2},
+-   "goals": "no goals",
+-   "endPos": {"line": 3, "column": 19}},
+   {"usedConstants":
+    ["sorryAx", "instOfNatNat", "Nat", "OfNat.ofNat", "Bool.false", "Eq"],
+    "tactic": "sorry",
+-   "proofState": 4,
++   "proofState": 3,
+    "pos": {"line": 2, "column": 14},
+    "goals": "⊢ 3 = 4",
+    "endPos": {"line": 2, "column": 19}},
+   {"usedConstants":
+    ["sorryAx", "instOfNatNat", "Nat", "OfNat.ofNat", "Bool.false", "Eq"],
+    "tactic": "sorry",
+-   "proofState": 5,
++   "proofState": 4,
+    "pos": {"line": 3, "column": 14},
+    "goals": "⊢ 4 = 5",
+    "endPos": {"line": 3, "column": 19}}],
