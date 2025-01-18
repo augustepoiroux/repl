@@ -1,0 +1,280 @@
+diff --git a/REPL/Lean/InfoTree.lean b/REPL/Lean/InfoTree.lean
+index a2c91a7..5ee2374 100644
+--- a/REPL/Lean/InfoTree.lean
++++ b/REPL/Lean/InfoTree.lean
+@@ -53,7 +53,6 @@ namespace Lean.Elab.Info
+ def kind : Info → String
+   | .ofTacticInfo         _ => "TacticInfo"
+   | .ofTermInfo           _ => "TermInfo"
+-  | ofPartialTermInfo     _ => "PartialTermInfo"
+   | .ofCommandInfo        _ => "CommmandInfo"
+   | .ofMacroExpansionInfo _ => "MacroExpansionInfo"
+   | .ofOptionInfo         _ => "OptionInfo"
+@@ -63,14 +62,12 @@ def kind : Info → String
+   | .ofCustomInfo         _ => "CustomInfo"
+   | .ofFVarAliasInfo      _ => "FVarAliasInfo"
+   | .ofFieldRedeclInfo    _ => "FieldRedeclInfo"
+-  | .ofChoiceInfo         _ => "ChoiceInfo"
+-  | .ofDelabTermInfo      _ => "DelabTermInfo"
++  | .ofOmissionInfo       _ => "OmissionInfo"
+
+ /-- The `Syntax` for a `Lean.Elab.Info`, if there is one. -/
+ def stx? : Info → Option Syntax
+   | .ofTacticInfo         info => info.stx
+   | .ofTermInfo           info => info.stx
+-  | ofPartialTermInfo     info => info.stx
+   | .ofCommandInfo        info => info.stx
+   | .ofMacroExpansionInfo info => info.stx
+   | .ofOptionInfo         info => info.stx
+@@ -80,8 +77,7 @@ def stx? : Info → Option Syntax
+   | .ofCustomInfo         info => info.stx
+   | .ofFVarAliasInfo      _    => none
+   | .ofFieldRedeclInfo    info => info.stx
+-  | .ofChoiceInfo         info => info.stx
+-  | .ofDelabTermInfo      info => info.stx
++  | .ofOmissionInfo       info => info.stx
+
+ /-- Is the `Syntax` for this `Lean.Elab.Info` original, or synthetic? -/
+ def isOriginal (i : Info) : Bool :=
+diff --git a/lean-toolchain b/lean-toolchain
+index a3edb8f..0bef727 100644
+--- a/lean-toolchain
++++ b/lean-toolchain
+@@ -1 +1 @@
+-leanprover/lean4:v4.16.0-rc2
++leanprover/lean4:v4.14.0-rc1
+diff --git a/test/Mathlib/lake-manifest.json b/test/Mathlib/lake-manifest.json
+index 14f86bc..b5b36c2 100644
+--- a/test/Mathlib/lake-manifest.json
++++ b/test/Mathlib/lake-manifest.json
+@@ -1,95 +1,95 @@
+ {"version": "1.1.0",
+  "packagesDir": ".lake/packages",
+  "packages":
+- [{"url": "https://github.com/leanprover-community/mathlib4",
+-   "type": "git",
+-   "subDir": null,
+-   "scope": "",
+-   "rev": "15f16b1ec50f425147926be1aede7b4baa725380",
+-   "name": "mathlib",
+-   "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.16.0-rc2",
+-   "inherited": false,
+-   "configFile": "lakefile.lean"},
+-  {"url": "https://github.com/leanprover-community/plausible",
++ [{"url": "https://github.com/leanprover-community/batteries",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "1622a8693b31523c8f82db48e01b14c74bc1f155",
+-   "name": "plausible",
++   "rev": "76e9ebe4176d29cb9cc89c669ab9f1ce32b33c3d",
++   "name": "batteries",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.16.0-rc1",
++   "inputRev": "main",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+-  {"url": "https://github.com/leanprover-community/LeanSearchClient",
++  {"url": "https://github.com/leanprover-community/quote4",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "003ff459cdd85de551f4dcf95cdfeefe10f20531",
+-   "name": "LeanSearchClient",
++   "rev": "303b23fbcea94ac4f96e590c1cad6618fd4f5f41",
++   "name": "Qq",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "main",
++   "inputRev": "master",
+    "inherited": true,
+-   "configFile": "lakefile.toml"},
+-  {"url": "https://github.com/leanprover-community/import-graph",
++   "configFile": "lakefile.lean"},
++  {"url": "https://github.com/leanprover-community/aesop",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "f72319c9686788305a8ab059f3c4d8c724785c83",
+-   "name": "importGraph",
++   "rev": "45d016d59cf45bcf8493a203e9564cfec5203d9b",
++   "name": "aesop",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "main",
++   "inputRev": "master",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+   {"url": "https://github.com/leanprover-community/ProofWidgets4",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "07f60e90998dfd6592688a14cd67bd4e384b77b2",
++   "rev": "1383e72b40dd62a566896a6e348ffe868801b172",
+    "name": "proofwidgets",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v0.0.50",
++   "inputRev": "v0.0.46",
+    "inherited": true,
+    "configFile": "lakefile.lean"},
+-  {"url": "https://github.com/leanprover-community/aesop",
++  {"url": "https://github.com/leanprover/lean4-cli",
+    "type": "git",
+    "subDir": null,
+-   "scope": "leanprover-community",
+-   "rev": "79402ad9ab4be9a2286701a9880697e2351e4955",
+-   "name": "aesop",
++   "scope": "leanprover",
++   "rev": "726b3c9ad13acca724d4651f14afc4804a7b0e4d",
++   "name": "Cli",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.16.0-rc1",
++   "inputRev": "main",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+-  {"url": "https://github.com/leanprover-community/quote4",
++  {"url": "https://github.com/leanprover-community/import-graph",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "f0c584bcb14c5adfb53079781eeea75b26ebbd32",
+-   "name": "Qq",
++   "rev": "ac7b989cbf99169509433124ae484318e953d201",
++   "name": "importGraph",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.15.0",
++   "inputRev": "main",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+-  {"url": "https://github.com/leanprover-community/batteries",
++  {"url": "https://github.com/leanprover-community/LeanSearchClient",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "c104265c34eb8181af14e8dbc14c2f034292cb02",
+-   "name": "batteries",
++   "rev": "7bedaed1ef024add1e171cc17706b012a9a37802",
++   "name": "LeanSearchClient",
+    "manifestFile": "lake-manifest.json",
+    "inputRev": "main",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+-  {"url": "https://github.com/leanprover/lean4-cli",
++  {"url": "https://github.com/leanprover-community/plausible",
+    "type": "git",
+    "subDir": null,
+-   "scope": "leanprover",
+-   "rev": "0c8ea32a15a4f74143e4e1e107ba2c412adb90fd",
+-   "name": "Cli",
++   "scope": "leanprover-community",
++   "rev": "0f1430e6f1193929f13905d450b2a44a54f3927e",
++   "name": "plausible",
+    "manifestFile": "lake-manifest.json",
+    "inputRev": "main",
+    "inherited": true,
+-   "configFile": "lakefile.toml"}],
++   "configFile": "lakefile.toml"},
++  {"url": "https://github.com/leanprover-community/mathlib4",
++   "type": "git",
++   "subDir": null,
++   "scope": "",
++   "rev": "a7fc949f1b05c2a01e01c027fd9f480496a1253e",
++   "name": "mathlib",
++   "manifestFile": "lake-manifest.json",
++   "inputRev": "v4.14.0-rc1",
++   "inherited": false,
++   "configFile": "lakefile.lean"}],
+  "name": "«repl-mathlib-tests»",
+  "lakeDir": ".lake"}
+diff --git a/test/Mathlib/lakefile.toml b/test/Mathlib/lakefile.toml
+index d103c76..0e662ff 100644
+--- a/test/Mathlib/lakefile.toml
++++ b/test/Mathlib/lakefile.toml
+@@ -4,7 +4,7 @@ defaultTargets = ["ReplMathlibTests"]
+ [[require]]
+ name = "mathlib"
+ git = "https://github.com/leanprover-community/mathlib4"
+-rev = "v4.16.0-rc2"
++rev = "v4.14.0-rc1"
+
+ [[lean_lib]]
+ name = "ReplMathlibTests"
+diff --git a/test/Mathlib/lean-toolchain b/test/Mathlib/lean-toolchain
+index 2ffc30c..0bef727 100644
+--- a/test/Mathlib/lean-toolchain
++++ b/test/Mathlib/lean-toolchain
+@@ -1 +1 @@
+-leanprover/lean4:v4.16.0-rc2
+\ No newline at end of file
++leanprover/lean4:v4.14.0-rc1
+diff --git a/test/Mathlib/test/H20231020.in b/test/Mathlib/test/H20231020.in
+index f508554..cd3e590 100644
+--- a/test/Mathlib/test/H20231020.in
++++ b/test/Mathlib/test/H20231020.in
+@@ -1,4 +1,4 @@
+-{"cmd": "import Mathlib.Algebra.BigOperators.Group.Finset.Basic\nimport Mathlib.Data.Real.Basic\nimport Mathlib.Data.Complex.Basic\nimport Mathlib.Data.Nat.Log\nimport Mathlib.Data.Complex.Exponential\nimport Mathlib.NumberTheory.Divisors\nimport Mathlib.Data.ZMod.Defs\nimport Mathlib.Data.ZMod.Basic\nimport Mathlib.Topology.Basic\nimport Mathlib.Data.Nat.Digits\nimport Mathlib.Tactic.NormNum.GCD\nopen BigOperators\nopen Real\nopen Nat\nopen Topology"}
++{"cmd": "import Mathlib.Algebra.BigOperators.Group.Finset\nimport Mathlib.Data.Real.Basic\nimport Mathlib.Data.Complex.Basic\nimport Mathlib.Data.Nat.Log\nimport Mathlib.Data.Complex.Exponential\nimport Mathlib.NumberTheory.Divisors\nimport Mathlib.Data.ZMod.Defs\nimport Mathlib.Data.ZMod.Basic\nimport Mathlib.Topology.Basic\nimport Mathlib.Data.Nat.Digits\nimport Mathlib.Tactic.NormNum.GCD\nopen BigOperators\nopen Real\nopen Nat\nopen Topology"}
+
+ {"cmd": "theorem mathd_numbertheory_188 : Nat.gcd 180 168 = 12 := by norm_num", "env": 0}
+
+diff --git a/test/Mathlib/test/H20231020.lean b/test/Mathlib/test/H20231020.lean
+index f23a305..670e12b 100644
+--- a/test/Mathlib/test/H20231020.lean
++++ b/test/Mathlib/test/H20231020.lean
+@@ -1,4 +1,4 @@
+-import Mathlib.Algebra.BigOperators.Group.Finset.Basic
++import Mathlib.Algebra.BigOperators.Group.Finset
+ import Mathlib.Data.Real.Basic
+ import Mathlib.Data.Complex.Basic
+ import Mathlib.Data.Nat.Log
+diff --git a/test/calc.expected.out b/test/calc.expected.out
+index 8db4c61..94f6a9f 100644
+--- a/test/calc.expected.out
++++ b/test/calc.expected.out
+@@ -3,12 +3,8 @@
+    ["Trans.trans",
+     "sorryAx",
+     "instOfNatNat",
+-    "Lean.Name.num",
+-    "Lean.Name.str",
+-    "Lean.Name.anonymous",
+     "instTransEq",
+     "Nat",
+-    "Lean.Name",
+     "OfNat.ofNat",
+     "Bool.false",
+     "Eq"],
+@@ -24,32 +20,14 @@
+    "goals": "no goals",
+    "endPos": {"line": 3, "column": 19}},
+   {"usedConstants":
+-   ["sorryAx",
+-    "instOfNatNat",
+-    "Lean.Name.num",
+-    "Lean.Name.str",
+-    "Lean.Name.anonymous",
+-    "Nat",
+-    "Lean.Name",
+-    "OfNat.ofNat",
+-    "Bool.false",
+-    "Eq"],
++   ["sorryAx", "instOfNatNat", "Nat", "OfNat.ofNat", "Bool.false", "Eq"],
+    "tactic": "sorry",
+    "proofState": 4,
+    "pos": {"line": 2, "column": 14},
+    "goals": "⊢ 3 = 4",
+    "endPos": {"line": 2, "column": 19}},
+   {"usedConstants":
+-   ["sorryAx",
+-    "instOfNatNat",
+-    "Lean.Name.num",
+-    "Lean.Name.str",
+-    "Lean.Name.anonymous",
+-    "Nat",
+-    "Lean.Name",
+-    "OfNat.ofNat",
+-    "Bool.false",
+-    "Eq"],
++   ["sorryAx", "instOfNatNat", "Nat", "OfNat.ofNat", "Bool.false", "Eq"],
+    "tactic": "sorry",
+    "proofState": 5,
+    "pos": {"line": 3, "column": 14},
