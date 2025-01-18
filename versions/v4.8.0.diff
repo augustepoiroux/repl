@@ -567,3 +567,4 @@ index 2a85844..1f6fbeb 100644
 +  "[Meta.Tactic.simp.rewrite] @eq_self:1000, 37 = 37 ==> True"],
   "proofState": 2,
   "goals": []}
+ 
