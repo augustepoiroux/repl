@@ -30,7 +30,7 @@ index d5c5ba2..b63c5ea 100644
      [("goals", toJson r.goals)],
      Json.nonemptyList "messages" r.messages,
 diff --git a/REPL/Lean/InfoTree.lean b/REPL/Lean/InfoTree.lean
-index a2c91a7..d3b28c1 100644
+index 3a1119f..612cec4 100644
 --- a/REPL/Lean/InfoTree.lean
 +++ b/REPL/Lean/InfoTree.lean
 @@ -53,7 +53,6 @@ namespace Lean.Elab.Info
@@ -79,6 +79,15 @@ index a2c91a7..d3b28c1 100644
    | .hole mvar => if m mvar then [.hole mvar] else []
 
  /-- Discard all nodes besides `.context` nodes and `TacticInfo` nodes. -/
+@@ -161,7 +157,7 @@ partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info →
+   | context ctx t => t.findAllInfo (ctx.mergeIntoOuter? ctx?) p stop
+   | node i ts  =>
+     let info := if p i then [(i, ctx?)] else []
+-    let rest := if stop i then [] else ts.toList.flatMap (fun t => t.findAllInfo ctx? p stop)
++    let rest := if stop i then [] else ts.toList.bind (fun t => t.findAllInfo ctx? p stop)
+     info ++ rest
+   | _ => []
+
 
 diff --git a/REPL/Main.lean b/REPL/Main.lean
 index a4b97c3..32702be 100644
