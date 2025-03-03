@@ -18,7 +18,7 @@ def getModifiers (stx : Syntax) (ctx: ContextInfo): DeclModifiers :=
       computeKind := (stx[3].getOptional?.map (·.prettyPrint.pretty.trim)).getD "regular",
       recKind := (stx[5].getOptional?.map (·.prettyPrint.pretty.trim)).getD "default",
       isUnsafe := !stx[4].isNone,
-      attributes := stx[1].getArgs.toList.flatMap parseAttributes, }
+      attributes := stx[1].getArgs.toList.bind parseAttributes, }
   | _ => {}
   where
     /-- Parse attribute instances from a Term.attributes syntax node
@@ -29,7 +29,7 @@ def getModifiers (stx : Syntax) (ctx: ContextInfo): DeclModifiers :=
       | .node _ ``Term.attributes args =>
         -- args[0] is "@[", args[1] is the attribute list, args[2] is "]"
         if args.size > 1 then
-          args[1]!.getArgs.toList.flatMap fun inst =>
+          args[1]!.getArgs.toList.bind fun inst =>
             match inst with
             | .node _ ``Term.attrInstance _ => [inst.prettyPrint.pretty.trim]
             | _ => []
@@ -38,7 +38,7 @@ def getModifiers (stx : Syntax) (ctx: ContextInfo): DeclModifiers :=
 
 partial def getIdents (stx : Syntax) : Array Name :=
   match stx with
-  | .node _ _ args => args.flatMap getIdents
+  | .node _ _ args => args.concatMap getIdents
   | .ident _ _ id _ => #[id]
   | _ => #[]
 
@@ -152,7 +152,7 @@ partial def extractDeclarationInfo (cmdInfo : CommandInfo) (infoTree : InfoTree)
     | #[] => none
     | _ => some { pp := binders.prettyPrint.pretty,
                   groups := binders.getArgs.map (·.prettyPrint.pretty),
-                  map := binders.getArgs.flatMap toBinderViews,
+                  map := binders.getArgs.concatMap toBinderViews,
                   range := binders.toRange ctx }
 
   -- let a := prevState.env.constants.find! decl[1].getId
@@ -194,7 +194,7 @@ where
                 | [] => false
                 | h' :: _ => h == h'
             )
-        | _ => ts.toList.flatMap (getFullname · shortName)
+        | _ => ts.toList.bind (getFullname · shortName)
     | _ => []
 
 open Lean.Parser in
@@ -202,7 +202,7 @@ open Lean.Parser in
 partial def extractCmdDeclarationInfos (trees : List InfoTree) (prevState : Command.State) :
     List DeclarationInfo :=
   let allDecls := trees.map (extractFromTree · none prevState)
-  allDecls.flatten
+  allDecls.join
 where
   extractFromTree (t : InfoTree) (ctx? : Option ContextInfo) (prevState : Command.State) :
       List DeclarationInfo :=
@@ -216,9 +216,9 @@ where
           if cmdInfo.stx.getKind == ``Command.declaration then
             [extractDeclarationInfo cmdInfo t ctx prevState]
           else
-            ts.toList.flatMap (extractFromTree · ctx? prevState)
-        | none => ts.toList.flatMap (extractFromTree · ctx? prevState)
-      | _ => ts.toList.flatMap (extractFromTree · ctx? prevState)
+            ts.toList.bind (extractFromTree · ctx? prevState)
+        | none => ts.toList.bind (extractFromTree · ctx? prevState)
+      | _ => ts.toList.bind (extractFromTree · ctx? prevState)
     | _ => []
 
 def extractAllDeclarationInfos (treeList : List (IncrementalState × Option InfoTree)) (prevState : Command.State) : List DeclarationInfo :=
