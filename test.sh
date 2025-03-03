@@ -41,6 +41,6 @@ for infile in $IN_DIR/*.in; do
 
 done
 
-# Run the Mathlib tests - skipped as no Mathlib releases exist for v4.13.0-rc3
+# Run the Mathlib tests - skipped as no Mathlib releases exist for v4.13.0-rc2
 # cp lean-toolchain test/Mathlib/
 # cd test/Mathlib/ && ./test.sh
