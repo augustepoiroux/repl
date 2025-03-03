@@ -95,7 +95,7 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   return id
 
 def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) :=
-  trees.flatMap InfoTree.sorries |>.filter (fun t => match t.2.1 with
+  trees.bind InfoTree.sorries |>.filter (fun t => match t.2.1 with
     | .term _ none => false
     | _ => true ) |>.mapM
       fun ⟨ctx, g, pos, endPos⟩ => do
@@ -117,7 +117,7 @@ def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
     pure "<failed to pretty print>"
 
 def tactics (trees : List InfoTree) : M m (List Tactic) :=
-  trees.flatMap InfoTree.tactics |>.mapM
+  trees.bind InfoTree.tactics |>.mapM
     fun ⟨ctx, stx, goals, pos, endPos, ns⟩ => do
       let proofState := some (← ProofSnapshot.create ctx none none goals)
       let goals := s!"{(← ctx.ppGoals goals)}".trim
@@ -184,6 +184,14 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
   Sum.inl <$> createProofStepReponse proofState
 
+partial def filterRootTactics (tree : InfoTree) : Bool :=
+  match tree with
+  | InfoTree.hole _     => true
+  | InfoTree.context _ t => filterRootTactics t
+  | InfoTree.node i _   => match i with
+      | .ofTacticInfo _ => false
+      | _ => true
+
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
@@ -201,6 +209,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   catch ex =>
     return .inr ⟨ex.toString⟩
   let messages ← messages.mapM fun m => Message.of m
+  let trees := trees.filter filterRootTactics
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees (initialCmdState?.map (·.env))
@@ -218,9 +227,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let env ← recordCommandSnapshot cmdSnapshot
   let jsonTrees := match s.infotree with
   | some "full" => trees
-  | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
-  | some "original" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainOriginal
-  | some "substantive" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainSubstantive
+  | some "tactics" => trees.bind InfoTree.retainTacticInfo
+  | some "original" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainOriginal
+  | some "substantive" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainSubstantive
   | _ => []
   let infotree ← if jsonTrees.isEmpty then
     pure none
