@@ -41,6 +41,6 @@ for infile in $IN_DIR/*.in; do
 
 done
 
-# Run the Mathlib tests - skipped as it seems Mathlib v4.9.0-rc1 is buggy
-# cp lean-toolchain test/Mathlib/
-# cd test/Mathlib/ && ./test.sh
+# Run the Mathlib tests
+cp lean-toolchain test/Mathlib/
+cd test/Mathlib/ && ./test.sh
