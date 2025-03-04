@@ -379,7 +379,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let bestIncrementalState? ← findBestIncrementalState s.cmd s.env
 
   let (initialCmdState, incStates, messages, headerCache) ← try
-    IO.processInput s.cmd initialCmdState? bestIncrementalState? (← get).headerCache
+    Lean.Language.Lean.Lean.Elab.IO.processInput s.cmd initialCmdState? bestIncrementalState? (← get).headerCache
   catch ex =>
     return .inr ⟨ex.toString⟩
 
@@ -403,8 +403,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
       { fileName := "",
         fileMap := default,
         tacticCache? := none,
-        snap? := none,
-        cancelTk? := none } }
+        snap? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
   let trees := cmdState.infoState.trees.toList
   let trees := trees.filter filterRootTactics
