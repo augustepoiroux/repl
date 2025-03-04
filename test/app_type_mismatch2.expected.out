@@ -3,12 +3,12 @@
    "pos": {"line": 5, "column": 4},
    "endPos": {"line": 5, "column": 15},
    "data":
-   "tactic 'apply' failed, failed to unify\n  n✝ + 1 = 0\nwith\n  true = true\nn✝ : Nat\n⊢ true = true"},
+   "tactic 'apply' failed, failed to unify\n  Nat.succ n✝ = 0\nwith\n  true = true\nn✝ : Nat\n⊢ true = true"},
   {"severity": "error",
    "pos": {"line": 1, "column": 19},
    "endPos": {"line": 6, "column": 11},
    "data":
-   "unsolved goals\ncase succ\nn✝ : Nat\nthis : true = true\n⊢ n✝ + 1 = 0"}],
+   "unsolved goals\ncase succ\nn✝ : Nat\nthis : true = true\n⊢ Nat.succ n✝ = 0"}],
  "env": 0}
 
 {"sorries":
@@ -25,11 +25,12 @@
 
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 1,
- "goals": ["case zero\n⊢ 0 = 0", "case succ\nn✝ : Nat\n⊢ n✝ + 1 = 0"]}
+ "goals":
+ ["case zero\n⊢ Nat.zero = 0", "case succ\nn✝ : Nat\n⊢ Nat.succ n✝ = 0"]}
 
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 2,
- "goals": ["case succ\nn✝ : Nat\n⊢ n✝ + 1 = 0"]}
+ "goals": ["case succ\nn✝ : Nat\n⊢ Nat.succ n✝ = 0"]}
 
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 3,
@@ -38,14 +39,14 @@
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
    "data":
-   "tactic 'apply' failed, failed to unify\n  n✝ + 1 = 0\nwith\n  true = true\nn✝ : Nat\n⊢ true = true"}],
- "goals": ["case succ\nn✝ : Nat\nthis : true = true\n⊢ n✝ + 1 = 0"]}
+   "tactic 'apply' failed, failed to unify\n  Nat.succ n✝ = 0\nwith\n  true = true\nn✝ : Nat\n⊢ true = true"}],
+ "goals": ["case succ\nn✝ : Nat\nthis : true = true\n⊢ Nat.succ n✝ = 0"]}
 
 {"sorries": [{"proofState": 4, "goal": "n✝ : Nat\n⊢ true = true"}],
  "proofStatus": "Incomplete: open goals remain",
  "proofState": 5,
- "goals": ["case succ\nn✝ : Nat\nthis : true = true\n⊢ n✝ + 1 = 0"]}
+ "goals": ["case succ\nn✝ : Nat\nthis : true = true\n⊢ Nat.succ n✝ = 0"]}
 
 {"message":
- "Lean error:\ntactic 'apply' failed, failed to unify\n  n✝ + 1 = 0\nwith\n  true = true\nn✝ : Nat\n⊢ true = true"}
+ "Lean error:\ntactic 'apply' failed, failed to unify\n  Nat.succ n✝ = 0\nwith\n  true = true\nn✝ : Nat\n⊢ true = true"}
 
