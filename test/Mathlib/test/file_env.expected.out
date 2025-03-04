@@ -16,6 +16,6 @@
  [{"severity": "info",
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 6},
-   "data": "demo (P Q R : Prop) : (P → Q) → (Q → R) → P → R"}],
+   "data": "demo (P Q R : Prop) (a✝ : P → Q) (a✝¹ : Q → R) (a✝² : P) : R"}],
  "env": 2}
 
