@@ -329,8 +329,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
       { fileName := "",
         fileMap := default,
-        tacticCache? := none,
-        snap? := none } }
+        tacticCache? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
   let jsonTrees := match s.infotree with
   | some "full" => trees
