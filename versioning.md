@@ -36,13 +36,13 @@ stg push
 git revert --no-commit <commit_id>
 ```
 
-Check changes, then run tests
+6. Check changes, keep only changes related to version change to propagate back all new features and bug fixes, then run tests
 
 ```bash
 ./test.sh
 ```
 
-If the tests pass, add the changes
+7. If the tests pass, add the changes
 
 ```bash
 stg refresh
@@ -51,13 +51,13 @@ git revert --abort
 
 Redo step 5. for as many missing versions as needed.
 
-6. Push all commits
+8. Push all commits
 
 ```bash
 stg push -a
 ```
 
-7. If successful, run tests
+9. If successful, run tests
 
 ```bash
 rm -rf ./.lake
@@ -65,7 +65,7 @@ rm -rf ./test/Mathlib/.lake
 ./test.sh
 ```
 
-8. Push the new branch
+10. Push the new branch
 
 ```bash
 ./push_commits_one_by_one.sh
