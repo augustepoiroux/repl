@@ -30,7 +30,7 @@ git revert --no-commit <commit_id>
 5. Check changes, keep only changes related to version change to propagate back all new features and bug fixes, then run tests
 
 ```bash
-./test.sh
+lake exe test
 ```
 
 6. If the tests pass, add the changes

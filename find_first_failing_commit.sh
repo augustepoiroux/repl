@@ -30,7 +30,7 @@ run_tests() {
     echo -e "${YELLOW}Running tests...${NC}"
     rm -rf ./.lake >/dev/null 2>&1 || true
     rm -rf ./test/Mathlib/.lake >/dev/null 2>&1 || true
-    ./test.sh
+    lake exe test
 }
 
 echo -e "${YELLOW}Starting to push patches one by one and test...${NC}"

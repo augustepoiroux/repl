@@ -83,6 +83,6 @@ fi
 
 # Run tests
 echo "Running tests..."
-./test.sh
+lake exe test
 
 echo "Lean version updated successfully to $NEW_VERSION!"

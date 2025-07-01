@@ -15,6 +15,22 @@ This is a fork of the original Lean REPL that supports multiple Lean versions. T
 
 ## Changelog
 
+### v1.1.1-dev
+
+- Add support for Lean v4.22.0-rc1 and v4.22.0-rc2.
+
+### v1.0.11
+
+- Add support for Lean v4.22.0-rc1 and v4.22.0-rc2.
+
+### v1.1.0-dev
+
+- Incorporate the experimental prefix state optimization from the `auto-prefix-optimization` branch, along with a few fixes for the tactic mode. [#110](https://github.com/leanprover-community/repl/pull/110), [#109](https://github.com/leanprover-community/repl/pull/109), [#108](https://github.com/leanprover-community/repl/pull/108), [#106](https://github.com/leanprover-community/repl/pull/106)
+
+### v1.0.10
+
+- Add support for Lean v4.21.0.
+
 ### v1.0.9
 
 - First version using the new tagging system: one tag per Lean version.
