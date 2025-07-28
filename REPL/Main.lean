@@ -373,7 +373,8 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let bestIncrementalState? ← findBestIncrementalState s.cmd s.env
 
   let (initialCmdState, incStates, messages, headerCache) ← try
-    IO.processInput s.cmd initialCmdState? bestIncrementalState? (← get).headerCache
+    let opts := s.setOptions.getD {}
+    IO.processInput s.cmd initialCmdState? bestIncrementalState? (← get).headerCache opts
   catch ex =>
     return .inr ⟨ex.toString⟩
 
