@@ -99,7 +99,7 @@ def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsa
     _root_.unpickle (Bool × Array Import × PHashMap Name ConstantInfo × PHashMap Name ConstantInfo × 
       CompactableCommandSnapshot × Command.Context) path
   -- Build environment based on whether we have map₁
-  let env ← if hasMap₁ && !map₁.isEmpty then
+  let env ← if hasMap₁ then
     -- Optimized path: use pickled constants without importing
     let mut env ← mkEmptyEnvironment
     env := { env with header := { env.header with imports := imports } }
@@ -336,7 +336,7 @@ def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
   let env ← match cmd? with
   | none =>
     enableInitializersExecution
-    if hasMap₁ && !map₁.isEmpty then
+    if hasMap₁ then
       -- Optimized path: use pickled constants without importing
       let mut env ← mkEmptyEnvironment
       env := { env with header := { env.header with imports := imports } }
