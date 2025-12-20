@@ -65,14 +65,15 @@ def runCommandElabM (p : CommandSnapshot) (t : CommandElabM α) : IO (α × Comm
 /--
 Pickle a `CommandSnapshot`, discarding closures and non-essential caches.
 
-When pickling the `Environment`, we do so relative to its imports.
+When pickling the `Environment`, we pickle the entire constants map to avoid
+slow importModules calls during unpickling.
 -/
 def pickle (p : CommandSnapshot) (path : FilePath) : IO Unit := do
   let env := p.cmdState.env
   let p' := { p with cmdState := { p.cmdState with env := ← mkEmptyEnvironment }}
   _root_.pickle path
     (env.header.imports,
-     env.constants.map₂,
+     env.constants,
      ({ p'.cmdState with } : CompactableCommandSnapshot),
      p'.cmdContext)
 
@@ -80,10 +81,12 @@ def pickle (p : CommandSnapshot) (path : FilePath) : IO Unit := do
 Unpickle a `CommandSnapshot`.
 -/
 def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsafe do
-  let ((imports, map₂, cmdState, cmdContext), region) ←
-    _root_.unpickle (Array Import × PHashMap Name ConstantInfo × CompactableCommandSnapshot ×
+  let ((imports, constants, cmdState, cmdContext), region) ←
+    _root_.unpickle (Array Import × SMap Name ConstantInfo × CompactableCommandSnapshot ×
       Command.Context) path
-  let env ← (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
+  -- Create empty environment and set its constants directly
+  let mut env ← mkEmptyEnvironment
+  env := { env with header := { env.header with imports := imports }, constants := constants }
   let p' : CommandSnapshot :=
   { cmdState := { cmdState with env }
     cmdContext }
@@ -259,7 +262,8 @@ open System (FilePath)
 /--
 Pickle a `ProofSnapshot`, discarding closures and non-essential caches.
 
-When pickling the `Environment`, we do so relative to its imports.
+When pickling the `Environment`, we pickle the entire constants map to avoid
+slow importModules calls during unpickling.
 -/
 def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
   let env := p.coreState.env
@@ -267,7 +271,7 @@ def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
   let (cfg, _) ← Lean.Meta.getConfig.toIO p'.coreContext p'.coreState p'.metaContext p'.metaState
   _root_.pickle path
     (env.header.imports,
-     env.constants.map₂,
+     env.constants,
      ({ p'.coreState with } : CompactableCoreState),
      p'.coreContext,
      p'.metaState,
@@ -283,17 +287,21 @@ Unpickle a `ProofSnapshot`.
 -/
 def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
     IO (ProofSnapshot × CompactedRegion) := unsafe do
-  let ((imports, map₂, coreState, coreContext, metaState, metaContext, termState, termContext,
+  let ((imports, constants, coreState, coreContext, metaState, metaContext, termState, termContext,
     tacticState, tacticContext, rootGoals), region) ←
-    _root_.unpickle (Array Import × PHashMap Name ConstantInfo × CompactableCoreState ×
+    _root_.unpickle (Array Import × SMap Name ConstantInfo × CompactableCoreState ×
       Core.Context × Meta.State × CompactableMetaContext × Term.State × CompactableTermContext ×
       Tactic.State × Tactic.Context × List MVarId) path
   let env ← match cmd? with
   | none =>
     enableInitializersExecution
-    (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
+    -- Create empty environment and set its constants directly
+    let mut env ← mkEmptyEnvironment
+    pure { env with header := { env.header with imports := imports }, constants := constants }
   | some cmd =>
-    cmd.cmdState.env.replay (Std.HashMap.ofList map₂.toList)
+    -- If we have a command snapshot, we still need to use the pickled constants
+    -- since they may have more declarations than the command snapshot
+    pure { cmd.cmdState.env with constants := constants }
   let p' : ProofSnapshot :=
   { coreState := { coreState with env }
     coreContext
