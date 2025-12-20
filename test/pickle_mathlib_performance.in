@@ -1,0 +1,9 @@
+{"cmd": "import Mathlib"}
+
+{"cmd": "def testFunc := 42", "env": 0}
+
+{"pickleTo": "test/pickle_mathlib.olean", "env": 1}
+
+{"unpickleEnvFrom": "test/pickle_mathlib.olean"}
+
+{"cmd": "example : testFunc = 42 := by rfl", "env": 2}

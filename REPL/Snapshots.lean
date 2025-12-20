@@ -86,7 +86,7 @@ def pickle (p : CommandSnapshot) (path : FilePath) : IO Unit := do
     _root_.pickle path
       (false,  -- Flag indicating this is the fallback format with only map₂
        env.header.imports,
-       #[].toPHashMap,  -- Empty map₁
+       {},  -- Empty map₁
        env.constants.map₂,
        ({ p'.cmdState with } : CompactableCommandSnapshot),
        p'.cmdContext)
@@ -311,7 +311,7 @@ def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
     _root_.pickle path
       (false,  -- Flag indicating this is the fallback format with only map₂
        env.header.imports,
-       #[].toPHashMap,  -- Empty map₁
+       {},  -- Empty map₁
        env.constants.map₂,
        ({ p'.coreState with } : CompactableCoreState),
        p'.coreContext,
