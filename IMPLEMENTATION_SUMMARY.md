@@ -42,11 +42,14 @@ def pickle (p : CommandSnapshot) (path : FilePath) : IO Unit := do
 ```lean
 def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsafe do
   let ((hasMap₁, imports, map₁, map₂, ...), region) ← _root_.unpickle ...
-  let env ← if hasMap₁ && !map₁.isEmpty then
+  let env ← if hasMap₁ then
     -- Optimized: No importModules, just replay all constants
     let mut env ← mkEmptyEnvironment
     env := { env with header := { env.header with imports := imports } }
-    env.replay (Std.HashMap.ofList (map₁.toList ++ map₂.toList))
+    -- Efficiently merge both maps using foldl
+    let allConstants := Std.HashMap.ofList map₁.toList
+    let allConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) allConstants
+    env.replay allConstants
   else
     -- Fallback: Original slow path
     (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)

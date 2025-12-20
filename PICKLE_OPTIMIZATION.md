@@ -38,14 +38,17 @@ The new pickle format includes a boolean flag indicating whether the optimized f
 #### Unpickle Logic
 
 ```lean
-if hasMap₁ && !map₁.isEmpty then
+if hasMap₁ then
   -- Optimized path: Create empty environment and replay all constants
-  let env ← mkEmptyEnvironment
+  let mut env ← mkEmptyEnvironment
   env := { env with header := { env.header with imports := imports } }
-  env ← env.replay (map₁.toList ++ map₂.toList)
+  -- Efficiently merge both maps using foldl to avoid list concatenation overhead
+  let allConstants := Std.HashMap.ofList map₁.toList
+  let allConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) allConstants
+  env ← env.replay allConstants
 else
   -- Fallback path: Use original importModules approach
-  (← importModules imports {} 0 (loadExts := true)).replay map₂.toList
+  (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
 ```
 
 ### Error Handling
