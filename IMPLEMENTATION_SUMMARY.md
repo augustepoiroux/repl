@@ -10,18 +10,13 @@ Change the pickle snapshot feature to pickle all the variables from the environm
 
 Modified `REPL/Snapshots.lean` to optimize pickle/unpickle operations:
 
-1. **Pickle Optimization**: Changed pickle functions to save both `env.constants.map₁` (imported constants) and `env.constants.map₂` (new constants), instead of just map₂.
+1. **Pickle Optimization**: Changed pickle functions to save the entire `env.constants` (SMap) instead of just `map₂`.
 
-2. **Unpickle Optimization**: Modified unpickle to reconstruct the environment from pickled constants without calling the slow `importModules` function.
+2. **Unpickle Optimization**: Modified unpickle to directly set the environment's constants field, completely avoiding the slow `importModules` call.
 
-3. **Error Handling**: Added try/catch blocks to handle unpicklable objects gracefully:
-   - Try to pickle all constants (map₁ + map₂)
-   - If pickling fails, fall back to original format (only map₂)
-   - Unpickle detects format via boolean flag and uses appropriate strategy
-
-4. **Format Versioning**: Added boolean flag to pickle format:
-   - `hasMap₁ = true`: Optimized format with all constants
-   - `hasMap₁ = false`: Fallback format with only new constants
+3. **Simplified Approach**: Removed try/catch and fallback logic. The implementation is now direct and simple:
+   - Pickle the entire constants SMap 
+   - Unpickle by setting the constants field directly
 
 ### Implementation Details
 
@@ -30,29 +25,19 @@ Modified `REPL/Snapshots.lean` to optimize pickle/unpickle operations:
 def pickle (p : CommandSnapshot) (path : FilePath) : IO Unit := do
   let env := p.cmdState.env
   let p' := { p with cmdState := { p.cmdState with env := ← mkEmptyEnvironment }}
-  try
-    _root_.pickle path
-      (true, env.header.imports, env.constants.map₁, env.constants.map₂, ...)
-  catch _ =>
-    _root_.pickle path  
-      (false, env.header.imports, {}, env.constants.map₂, ...)
+  _root_.pickle path
+    (env.header.imports,
+     env.constants,  -- Pickle entire SMap
+     ...)
 ```
 
 #### CommandSnapshot.unpickle
 ```lean
 def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsafe do
-  let ((hasMap₁, imports, map₁, map₂, ...), region) ← _root_.unpickle ...
-  let env ← if hasMap₁ then
-    -- Optimized: No importModules, just replay all constants
-    let mut env ← mkEmptyEnvironment
-    env := { env with header := { env.header with imports := imports } }
-    -- Efficiently merge both maps using foldl
-    let importedConstants := Std.HashMap.ofList map₁.toList
-    let mergedConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) importedConstants
-    env.replay mergedConstants
-  else
-    -- Fallback: Original slow path
-    (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
+  let ((imports, constants, ...), region) ← _root_.unpickle ...
+  -- Create empty environment and set its constants directly
+  let mut env ← mkEmptyEnvironment
+  env := { env with header := { env.header with imports := imports }, constants := constants }
 ```
 
 ### Why This Optimizes Performance

@@ -72,17 +72,15 @@ Unpickle: Load imports + map₂
 ### After (Optimized Implementation)
 
 ```
-Pickle: Save imports + map₁ + map₂ (all constants)
+Pickle: Save imports + constants (entire SMap with all constants)
          ↓ (larger file, but still fast)
        Disk
 
-Unpickle: Load imports + map₁ + map₂
+Unpickle: Load imports + constants
          ↓
        mkEmptyEnvironment()  ← FAST (no file I/O)
          ↓
-       Set imports in header
-         ↓
-       replay(map₁ + map₂)  ← FAST (just builds data structures)
+       Set env.constants directly  ← FAST (just assigns field)
          ↓
        Environment ready
 ```
@@ -95,14 +93,14 @@ The bottleneck was `importModules()` which:
 - Reconstructs all constants from imports
 - Initializes extensions
 
-By pickling all constants directly, we bypass this entirely and just reconstruct the data structures in memory.
+By pickling the entire constants SMap and directly setting it in the environment, we bypass this entirely.
 
 ## Expected Performance
 
 For environments with large imports like Mathlib:
 - **Baseline**: Import Mathlib from scratch (slow)
 - **Old unpickle**: Call importModules + replay new constants (slow) 
-- **New unpickle**: Create empty env + replay all constants (fast)
+- **New unpickle**: Create empty env + set constants directly (fast)
 - **Expected Speedup**: 2-10x faster unpickling
 
 The exact speedup depends on:
@@ -112,29 +110,26 @@ The exact speedup depends on:
 
 ## Backward Compatibility
 
-✅ **Fully backward compatible**:
-- Old pickle files (without map₁) still work via fallback path
-- New pickle files use optimized format when possible
-- Format auto-detected via `hasMap₁` boolean flag
-- No breaking changes to API
+**Breaking change**: This implementation is NOT backward compatible with old pickle files. Old pickle files will not work with the new unpickle implementation. This is acceptable for the REPL use case where pickle files are typically transient and session-specific.
 
 ## Trade-offs
 
 ### Advantages
 - ✅ **Much faster unpickling** (primary goal achieved)
-- ✅ **Handles unpicklable objects** via fallback
-- ✅ **Backward compatible** with old pickle files
-- ✅ **Efficient implementation** with optimized algorithms
+- ✅ **Simple, direct implementation** without complex error handling
+- ✅ **Avoids accessing private fields** (map₁/map₂)
+- ✅ **Clean code** without fallback logic
 
 ### Disadvantages
 - ⚠️ **Larger pickle files** (contains all constants, not just new ones)
-- ⚠️ **Slightly slower pickling** (more data to serialize)
+- ⚠️ **Not backward compatible** (old pickle files won't work)
 - ⚠️ **More disk space** required for pickle files
 
 For the use case of optimizing Mathlib imports, these trade-offs are acceptable since:
 - Disk space is cheap
 - Pickling is done once, unpickling is done many times
 - The speedup in unpickling outweighs the cost of larger files
+- Pickle files are typically transient
 
 ## Testing
 

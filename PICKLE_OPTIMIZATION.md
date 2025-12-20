@@ -17,43 +17,37 @@ This made unpickling slow, particularly when working with Mathlib, as the `impor
 
 The optimized implementation now:
 
-1. **Pickles all constants** (`env.constants.map₁` + `env.constants.map₂`) instead of just new ones
-2. **Avoids `importModules`** during unpickling by reconstructing the environment from pickled constants
-3. **Handles failures gracefully** with try/catch and fallback to the old format
+1. **Pickles the entire constants map** (`env.constants` SMap) instead of just new constants
+2. **Avoids `importModules`** entirely during unpickling by directly setting the constants field
+3. **Simpler approach** without fallback logic or error handling complexity
 
 ### Implementation Details
 
 #### Pickle Format
 
-The new pickle format includes a boolean flag indicating whether the optimized format is used:
+The new pickle format saves the entire SMap:
 
 ```lean
-(hasMap₁ : Bool,
- imports : Array Import,
- map₁ : PHashMap Name ConstantInfo,  -- All imported constants
- map₂ : PHashMap Name ConstantInfo,  -- New constants
+(imports : Array Import,
+ constants : SMap Name ConstantInfo,  -- Entire constants map (both imported and new)
  ...other state...)
 ```
 
 #### Unpickle Logic
 
 ```lean
-if hasMap₁ then
-  -- Optimized path: Create empty environment and replay all constants
-  let mut env ← mkEmptyEnvironment
-  env := { env with header := { env.header with imports := imports } }
-  -- Efficiently merge both maps using foldl to avoid list concatenation overhead
-  let importedConstants := Std.HashMap.ofList map₁.toList
-  let mergedConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) importedConstants
-  env ← env.replay mergedConstants
-else
-  -- Fallback path: Use original importModules approach
-  (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
+-- Create empty environment and set its constants directly
+let mut env ← mkEmptyEnvironment
+env := { env with header := { env.header with imports := imports }, constants := constants }
 ```
 
-### Error Handling
+### Why This Works
 
-If pickling `map₁` fails (due to unpicklable objects), the implementation automatically falls back to the original format with only `map₂`. The unpickle function detects this via the `hasMap₁` flag and uses the appropriate unpickling strategy.
+By pickling the entire `env.constants` SMap object:
+- We avoid accessing private internal fields (map₁/map₂)
+- We bypass the slow `importModules` call completely  
+- We have a simpler, more direct implementation
+- The SMap type is a standard Lean structure that should be picklable
 
 ## Testing
 
@@ -96,16 +90,13 @@ Relevant test files:
 
 ## Compatibility
 
-The changes maintain backward compatibility:
-- Old pickle files (without map₁) will still work via the fallback path
-- New pickle files use the optimized format when possible
-- The format auto-detects via the `hasMap₁` boolean flag
+**Breaking change**: This implementation is NOT backward compatible with old pickle files. Old pickle files saved only `map₂` but the new format expects the entire `constants` SMap. This is acceptable for the REPL use case where pickle files are typically transient.
 
 ## Limitations
 
-1. **Pickle file size**: Files are larger as they contain all imported constants, not just new ones
-2. **Extensions**: Environment extensions are not fully pickled, so some extension data must be reinitialized
-3. **Unpicklable objects**: Some rare objects might not be picklable, triggering fallback to the old format
+1. **Pickle file size**: Files are larger as they contain all constants, not just new ones
+2. **Extensions**: Environment extensions are not fully pickled, some extension data may need reinitialization
+3. **Not backward compatible**: Old pickle files will not work with new unpickle implementation
 
 ## Future Improvements
 
@@ -113,3 +104,4 @@ Possible future enhancements:
 - Compress pickle files to reduce disk space
 - Pickle environment extensions where possible
 - Cache pickled Mathlib imports for reuse across sessions
+- Add version checking to handle backward compatibility gracefully
