@@ -362,20 +362,7 @@ def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
       if let .simple ns _ := o then
         activateScoped ns
   return (p'', region)
-  let p' : ProofSnapshot :=
-  { coreState := { coreState with env }
-    coreContext
-    metaState
-    metaContext := { metaContext with }
-    termState
-    termContext := { termContext with }
-    tacticState
-    tacticContext
-    rootGoals }
-  let (_, p'') ← p'.runCoreM do
-    for o in ← getOpenDecls do
-      if let .simple ns _ := o then
-        activateScoped ns
-  return (p'', region)
+
+end ProofSnapshot
 
 end ProofSnapshot

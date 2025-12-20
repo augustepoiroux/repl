@@ -36,8 +36,13 @@ echo ""
 echo "=== Results ==="
 echo "Baseline (import from scratch): ${baseline}s"
 echo "Unpickle time: ${unpickle_time}s"
-speedup=$(echo "scale=2; $baseline / $unpickle_time" | bc)
-echo "Speedup: ${speedup}x"
+# Check if unpickle_time is valid before calculating speedup
+if command -v bc &> /dev/null && [ -n "$unpickle_time" ] && [ "$unpickle_time" != "0" ] && [ "$unpickle_time" != "0.00" ]; then
+  speedup=$(echo "scale=2; $baseline / $unpickle_time" | bc 2>/dev/null || echo "N/A")
+  echo "Speedup: ${speedup}x"
+else
+  echo "Speedup: (calculation skipped - bc not available or invalid time)"
+fi
 echo ""
 
 # Cleanup
