@@ -65,33 +65,48 @@ def runCommandElabM (p : CommandSnapshot) (t : CommandElabM α) : IO (α × Comm
 /--
 Pickle a `CommandSnapshot`, discarding closures and non-essential caches.
 
-When pickling the `Environment`, we pickle all constants (both imported and new)
-to avoid slow importModules calls during unpickling.
+When pickling the `Environment`, we try to pickle all constants (both imported and new)
+to avoid slow importModules calls during unpickling. If pickling all constants fails
+(e.g., due to unpicklable objects), we fall back to pickling only new constants.
 -/
 def pickle (p : CommandSnapshot) (path : FilePath) : IO Unit := do
   let env := p.cmdState.env
   let p' := { p with cmdState := { p.cmdState with env := ← mkEmptyEnvironment }}
-  _root_.pickle path
-    (env.header.imports,
-     env.constants.map₁,
-     env.constants.map₂,
-     ({ p'.cmdState with } : CompactableCommandSnapshot),
-     p'.cmdContext)
+  -- Try to pickle all constants for faster unpickling
+  try
+    _root_.pickle path
+      (true,  -- Flag indicating this is the optimized format with map₁
+       env.header.imports,
+       env.constants.map₁,
+       env.constants.map₂,
+       ({ p'.cmdState with } : CompactableCommandSnapshot),
+       p'.cmdContext)
+  catch _ =>
+    -- Fall back to original format if pickling map₁ fails
+    _root_.pickle path
+      (false,  -- Flag indicating this is the fallback format with only map₂
+       env.header.imports,
+       #[].toPHashMap,  -- Empty map₁
+       env.constants.map₂,
+       ({ p'.cmdState with } : CompactableCommandSnapshot),
+       p'.cmdContext)
 
 /--
 Unpickle a `CommandSnapshot`.
 -/
 def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsafe do
-  let ((imports, map₁, map₂, cmdState, cmdContext), region) ←
-    _root_.unpickle (Array Import × PHashMap Name ConstantInfo × PHashMap Name ConstantInfo × 
+  let ((hasMap₁, imports, map₁, map₂, cmdState, cmdContext), region) ←
+    _root_.unpickle (Bool × Array Import × PHashMap Name ConstantInfo × PHashMap Name ConstantInfo × 
       CompactableCommandSnapshot × Command.Context) path
-  -- Create a base environment with just the imports header
-  -- This avoids the slow importModules call
-  let mut env ← mkEmptyEnvironment
-  -- Set the imports in the environment header
-  env := { env with header := { env.header with imports := imports } }
-  -- Replay all pickled constants (both imported and new) to reconstruct the full environment
-  env ← env.replay (Std.HashMap.ofList (map₁.toList ++ map₂.toList))
+  -- Build environment based on whether we have map₁
+  let env ← if hasMap₁ && !map₁.isEmpty then
+    -- Optimized path: use pickled constants without importing
+    let mut env ← mkEmptyEnvironment
+    env := { env with header := { env.header with imports := imports } }
+    env.replay (Std.HashMap.ofList (map₁.toList ++ map₂.toList))
+  else
+    -- Fallback path: import modules and replay only map₂
+    (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
   let p' : CommandSnapshot :=
   { cmdState := { cmdState with env }
     cmdContext }
@@ -267,44 +282,68 @@ open System (FilePath)
 /--
 Pickle a `ProofSnapshot`, discarding closures and non-essential caches.
 
-When pickling the `Environment`, we pickle all constants (both imported and new)
-to avoid slow importModules calls during unpickling.
+When pickling the `Environment`, we try to pickle all constants (both imported and new)
+to avoid slow importModules calls during unpickling. If pickling all constants fails
+(e.g., due to unpicklable objects), we fall back to pickling only new constants.
 -/
 def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
   let env := p.coreState.env
   let p' := { p with coreState := { p.coreState with env := ← mkEmptyEnvironment }}
   let (cfg, _) ← Lean.Meta.getConfig.toIO p'.coreContext p'.coreState p'.metaContext p'.metaState
-  _root_.pickle path
-    (env.header.imports,
-     env.constants.map₁,
-     env.constants.map₂,
-     ({ p'.coreState with } : CompactableCoreState),
-     p'.coreContext,
-     p'.metaState,
-     ({ p'.metaContext with config := cfg } : CompactableMetaContext),
-     p'.termState,
-     ({ p'.termContext with } : CompactableTermContext),
-     p'.tacticState,
-     p'.tacticContext,
-     p'.rootGoals)
+  -- Try to pickle all constants for faster unpickling
+  try
+    _root_.pickle path
+      (true,  -- Flag indicating this is the optimized format with map₁
+       env.header.imports,
+       env.constants.map₁,
+       env.constants.map₂,
+       ({ p'.coreState with } : CompactableCoreState),
+       p'.coreContext,
+       p'.metaState,
+       ({ p'.metaContext with config := cfg } : CompactableMetaContext),
+       p'.termState,
+       ({ p'.termContext with } : CompactableTermContext),
+       p'.tacticState,
+       p'.tacticContext,
+       p'.rootGoals)
+  catch _ =>
+    -- Fall back to original format if pickling map₁ fails
+    _root_.pickle path
+      (false,  -- Flag indicating this is the fallback format with only map₂
+       env.header.imports,
+       #[].toPHashMap,  -- Empty map₁
+       env.constants.map₂,
+       ({ p'.coreState with } : CompactableCoreState),
+       p'.coreContext,
+       p'.metaState,
+       ({ p'.metaContext with config := cfg } : CompactableMetaContext),
+       p'.termState,
+       ({ p'.termContext with } : CompactableTermContext),
+       p'.tacticState,
+       p'.tacticContext,
+       p'.rootGoals)
 
 /--
 Unpickle a `ProofSnapshot`.
 -/
 def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
     IO (ProofSnapshot × CompactedRegion) := unsafe do
-  let ((imports, map₁, map₂, coreState, coreContext, metaState, metaContext, termState, termContext,
+  let ((hasMap₁, imports, map₁, map₂, coreState, coreContext, metaState, metaContext, termState, termContext,
     tacticState, tacticContext, rootGoals), region) ←
-    _root_.unpickle (Array Import × PHashMap Name ConstantInfo × PHashMap Name ConstantInfo × 
+    _root_.unpickle (Bool × Array Import × PHashMap Name ConstantInfo × PHashMap Name ConstantInfo × 
       CompactableCoreState × Core.Context × Meta.State × CompactableMetaContext × Term.State × 
       CompactableTermContext × Tactic.State × Tactic.Context × List MVarId) path
   let env ← match cmd? with
   | none =>
     enableInitializersExecution
-    -- Create empty environment and replay all constants to avoid slow importModules
-    let mut env ← mkEmptyEnvironment
-    env := { env with header := { env.header with imports := imports } }
-    env.replay (Std.HashMap.ofList (map₁.toList ++ map₂.toList))
+    if hasMap₁ && !map₁.isEmpty then
+      -- Optimized path: use pickled constants without importing
+      let mut env ← mkEmptyEnvironment
+      env := { env with header := { env.header with imports := imports } }
+      env.replay (Std.HashMap.ofList (map₁.toList ++ map₂.toList))
+    else
+      -- Fallback path: import modules and replay only map₂
+      (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
   | some cmd =>
     -- If we have a command snapshot, use its environment and just replay new constants
     cmd.cmdState.env.replay (Std.HashMap.ofList map₂.toList)
