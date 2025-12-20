@@ -103,7 +103,10 @@ def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsa
     -- Optimized path: use pickled constants without importing
     let mut env ← mkEmptyEnvironment
     env := { env with header := { env.header with imports := imports } }
-    env.replay (Std.HashMap.ofList (map₁.toList ++ map₂.toList))
+    -- Merge both maps efficiently by inserting all entries
+    let allConstants := Std.HashMap.ofList map₁.toList
+    let allConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) allConstants
+    env.replay allConstants
   else
     -- Fallback path: import modules and replay only map₂
     (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
@@ -340,7 +343,10 @@ def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
       -- Optimized path: use pickled constants without importing
       let mut env ← mkEmptyEnvironment
       env := { env with header := { env.header with imports := imports } }
-      env.replay (Std.HashMap.ofList (map₁.toList ++ map₂.toList))
+      -- Merge both maps efficiently by inserting all entries
+      let allConstants := Std.HashMap.ofList map₁.toList
+      let allConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) allConstants
+      env.replay allConstants
     else
       -- Fallback path: import modules and replay only map₂
       (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
@@ -362,7 +368,5 @@ def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
       if let .simple ns _ := o then
         activateScoped ns
   return (p'', region)
-
-end ProofSnapshot
 
 end ProofSnapshot
