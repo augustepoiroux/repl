@@ -104,9 +104,9 @@ def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsa
     let mut env ← mkEmptyEnvironment
     env := { env with header := { env.header with imports := imports } }
     -- Merge both maps efficiently by inserting all entries
-    let allConstants := Std.HashMap.ofList map₁.toList
-    let allConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) allConstants
-    env.replay allConstants
+    let importedConstants := Std.HashMap.ofList map₁.toList
+    let mergedConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) importedConstants
+    env.replay mergedConstants
   else
     -- Fallback path: import modules and replay only map₂
     (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
@@ -344,9 +344,9 @@ def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
       let mut env ← mkEmptyEnvironment
       env := { env with header := { env.header with imports := imports } }
       -- Merge both maps efficiently by inserting all entries
-      let allConstants := Std.HashMap.ofList map₁.toList
-      let allConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) allConstants
-      env.replay allConstants
+      let importedConstants := Std.HashMap.ofList map₁.toList
+      let mergedConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) importedConstants
+      env.replay mergedConstants
     else
       -- Fallback path: import modules and replay only map₂
       (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)

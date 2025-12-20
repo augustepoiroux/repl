@@ -43,9 +43,9 @@ if hasMap₁ then
   let mut env ← mkEmptyEnvironment
   env := { env with header := { env.header with imports := imports } }
   -- Efficiently merge both maps using foldl to avoid list concatenation overhead
-  let allConstants := Std.HashMap.ofList map₁.toList
-  let allConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) allConstants
-  env ← env.replay allConstants
+  let importedConstants := Std.HashMap.ofList map₁.toList
+  let mergedConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) importedConstants
+  env ← env.replay mergedConstants
 else
   -- Fallback path: Use original importModules approach
   (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)

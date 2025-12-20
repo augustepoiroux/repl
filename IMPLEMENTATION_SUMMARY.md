@@ -47,9 +47,9 @@ def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsa
     let mut env ← mkEmptyEnvironment
     env := { env with header := { env.header with imports := imports } }
     -- Efficiently merge both maps using foldl
-    let allConstants := Std.HashMap.ofList map₁.toList
-    let allConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) allConstants
-    env.replay allConstants
+    let importedConstants := Std.HashMap.ofList map₁.toList
+    let mergedConstants := map₂.toList.foldl (fun m (k, v) => m.insert k v) importedConstants
+    env.replay mergedConstants
   else
     -- Fallback: Original slow path
     (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
