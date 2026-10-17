@@ -15,6 +15,11 @@ This is a fork of the original Lean REPL that supports multiple Lean versions. T
 
 ## Changelog
 
+### v1.3.19
+
+- Add support for Lean v4.32.1, v4.32.2, v4.33.0-rc2 to v4.36.0-rc1.
+- Fix swallowed import error messages and prevent header cache contamination on invalid imports.
+
 ### v1.3.18
 
 - Add support for Lean v4.31.0-rc2 to v4.33.0-rc1.
