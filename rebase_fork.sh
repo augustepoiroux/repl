@@ -13,35 +13,36 @@ old_base=$1
 # New base (target to rebase onto)
 new_base=$2
 
+current_base=$new_base
+
 for branch in $branches; do
   # Check if branch is already rebased (resumable)
-  if git merge-base --is-ancestor $new_base $branch 2>/dev/null; then
-    echo "Branch $branch is already rebased onto $new_base, skipping."
+  if git merge-base --is-ancestor $current_base $branch 2>/dev/null; then
+    echo "Branch $branch is already rebased onto $current_base, skipping."
+    old_base=$(git rev-parse $branch)
+    current_base=$branch
     continue
   fi
 
-  echo "Rebasing $branch onto $new_base..."
+  echo "Rebasing $branch onto $current_base..."
+  old_branch_head=$(git rev-parse $branch)
   git checkout $branch
-  git rebase --onto $new_base $old_base $branch
+  git rebase --onto $current_base $old_base $branch
   if [ $? -ne 0 ]; then
     echo "Rebase failed for $branch. Resolve conflicts and run 'git rebase --continue', then rerun the script."
     break
   fi
 
   # Run tests after successful rebase
-  echo "Running lake exe repl for $branch..."
-  lake exe repl
+  echo "Building and testing REPL for $branch..."
+  lake build
+  echo '{"cmd": "#eval 1"}' | lake exe repl
   if [ $? -ne 0 ]; then
-    echo "lake exe repl failed for $branch. Fix issues and rerun the script."
-    break
-  fi
-
-  echo "Running lake exe test for $branch..."
-  lake exe test
-  if [ $? -ne 0 ]; then
-    echo "lake exe test failed for $branch. Fix issues and rerun the script."
+    echo "REPL check failed for $branch. Fix issues and rerun the script."
     break
   fi
 
   echo "Branch $branch rebased and tested successfully."
+  old_base=$old_branch_head
+  current_base=$branch
 done

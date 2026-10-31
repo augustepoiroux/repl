@@ -235,6 +235,10 @@ fi
 if [ ${#TAGS_CREATED[@]} -gt 0 ]; then
   echo -e "\nPushing ${#TAGS_CREATED[@]} tags to $REMOTE one by one to trigger CI for each tag..."
   for TAG in "${TAGS_CREATED[@]}"; do
+    if git ls-remote --exit-code --tags "$REMOTE" "refs/tags/$TAG" >/dev/null 2>&1; then
+      echo "Tag $TAG already exists on $REMOTE. Skipping push."
+      continue
+    fi
     echo "Pushing tag $TAG to $REMOTE..."
     git push "$REMOTE" "$TAG"
     # Small delay to ensure CI has time to register each tag separately

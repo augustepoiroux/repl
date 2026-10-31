@@ -15,6 +15,12 @@ This is a fork of the original Lean REPL that supports multiple Lean versions. T
 
 ## Changelog
 
+### v1.4.0
+
+- Add support for Lean v4.36.0-rc2.
+- Transition to living release model for automated Lean toolchain updates.
+- Modernize CI workflows and harden Mathlib test cache handling.
+
 ### v1.3.19
 
 - Add support for Lean v4.32.1, v4.32.2, v4.33.0-rc2 to v4.36.0-rc1.
